@@ -1,0 +1,576 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Interactive Starfield</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: #000;
+            overflow: hidden;
+        }
+
+        canvas {
+            display: block;
+            background: #000;
+        }
+
+        .controls {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: rgba(20, 20, 30, 0.3);
+            padding: 12px;
+            border-radius: 8px;
+            color: #ffb3d9;
+            min-width: 220px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.3);
+            backdrop-filter: blur(5px);
+            cursor: move;
+            user-select: none;
+        }
+
+        .controls h2 {
+            margin-bottom: 10px;
+            font-size: 14px;
+            color: #ffb3d9;
+            border-bottom: 1px solid rgba(255, 179, 217, 0.5);
+            padding-bottom: 5px;
+            cursor: move;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .toggle-btn {
+            background: none;
+            border: none;
+            color: #ffb3d9;
+            cursor: pointer;
+            font-size: 16px;
+            padding: 0;
+            width: 20px;
+            height: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: transform 0.3s;
+        }
+
+        .toggle-btn:hover {
+            color: #ffc8e3;
+            transform: scale(1.2);
+        }
+
+        .controls-content {
+            transition: max-height 0.3s ease, opacity 0.3s ease;
+            overflow: hidden;
+        }
+
+        .controls.minimized .controls-content {
+            max-height: 0;
+            opacity: 0;
+        }
+
+        .controls.minimized {
+            min-width: 160px;
+        }
+
+        .control-group {
+            margin-bottom: 12px;
+        }
+
+        .control-group label {
+            display: block;
+            margin-bottom: 4px;
+            font-size: 11px;
+            color: #ffb3d9;
+        }
+
+        .control-group input[type="range"] {
+            width: 100%;
+            height: 4px;
+            border-radius: 2px;
+            background: rgba(73, 80, 87, 0.5);
+            outline: none;
+            -webkit-appearance: none;
+        }
+
+        .control-group input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            background: #ffb3d9;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .control-group input[type="range"]::-webkit-slider-thumb:hover {
+            background: #ffc8e3;
+            transform: scale(1.2);
+        }
+
+        .control-group input[type="range"]::-moz-range-thumb {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            background: #ffb3d9;
+            cursor: pointer;
+            border: none;
+            transition: all 0.2s;
+        }
+
+        .control-group input[type="range"]::-moz-range-thumb:hover {
+            background: #ffc8e3;
+            transform: scale(1.2);
+        }
+
+        .value-display {
+            display: inline-block;
+            float: right;
+            color: #ffb3d9;
+            font-weight: bold;
+            font-size: 11px;
+        }
+
+        .reset-btn {
+            width: 100%;
+            padding: 6px;
+            margin-top: 6px;
+            background: rgba(255, 179, 217, 0.6);
+            border: none;
+            border-radius: 4px;
+            color: white;
+            font-weight: bold;
+            font-size: 11px;
+            cursor: pointer;
+            transition: background 0.3s;
+        }
+
+        .reset-btn:hover {
+            background: rgba(255, 200, 227, 0.8);
+        }
+
+        .info {
+            position: fixed;
+            bottom: 20px;
+            left: 20px;
+            color: #495057;
+            font-size: 12px;
+        }
+    </style>
+</head>
+<body>
+    <canvas id="starfield"></canvas>
+
+    <div class="controls">
+        <h2>
+            <span>Starfield Controls</span>
+            <button class="toggle-btn" id="toggleBtn">−</button>
+        </h2>
+
+        <div class="controls-content">
+        <div class="control-group">
+            <label>
+                Star Count
+                <span class="value-display" id="countValue">500</span>
+            </label>
+            <input type="range" id="starCount" min="100" max="2000" value="500" step="50">
+        </div>
+
+        <div class="control-group">
+            <label>
+                Speed
+                <span class="value-display" id="speedValue">1.0</span>
+            </label>
+            <input type="range" id="speed" min="0.1" max="5" value="1" step="0.1">
+        </div>
+
+        <div class="control-group">
+            <label>
+                Trail Length
+                <span class="value-display" id="trailValue">50</span>
+            </label>
+            <input type="range" id="trailLength" min="0" max="150" value="50" step="5">
+        </div>
+
+        <div class="control-group">
+            <label>
+                Star Size
+                <span class="value-display" id="sizeValue">1.5</span>
+            </label>
+            <input type="range" id="starSize" min="0.5" max="4" value="1.5" step="0.1">
+        </div>
+
+        <div class="control-group">
+            <label>
+                Depth Effect
+                <span class="value-display" id="depthValue">1000</span>
+            </label>
+            <input type="range" id="depth" min="500" max="2000" value="1000" step="100">
+        </div>
+
+        <div class="control-group">
+            <label>
+                Trail Opacity
+                <span class="value-display" id="opacityValue">0.8</span>
+            </label>
+            <input type="range" id="trailOpacity" min="0.1" max="1" value="0.8" step="0.1">
+        </div>
+
+        <button class="reset-btn" id="resetBtn">Reset to Defaults</button>
+        </div>
+    </div>
+
+    <div class="info">
+        Interactive Starfield Particle System
+    </div>
+
+    <script>
+        const canvas = document.getElementById('starfield');
+        const ctx = canvas.getContext('2d');
+
+        // Set canvas size
+        function resizeCanvas() {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+        }
+        resizeCanvas();
+        window.addEventListener('resize', resizeCanvas);
+
+        // Parameters
+        let params = {
+            starCount: 500,
+            speed: 1,
+            trailLength: 50,
+            starSize: 1.5,
+            depth: 1000,
+            trailOpacity: 0.8
+        };
+
+        // Pastel color palette
+        const pastelColors = [
+            { r: 255, g: 179, b: 217 }, // Light pink
+            { r: 179, g: 229, b: 252 }, // Light blue
+            { r: 255, g: 223, b: 186 }, // Peach
+            { r: 186, g: 225, b: 255 }, // Baby blue
+            { r: 255, g: 200, b: 221 }, // Rose
+            { r: 200, g: 255, b: 220 }, // Mint
+            { r: 255, g: 218, b: 185 }, // Light coral
+            { r: 221, g: 200, b: 255 }, // Lavender
+            { r: 255, g: 255, b: 186 }, // Light yellow
+            { r: 186, g: 255, b: 255 }  // Cyan
+        ];
+
+        // Star class
+        class Star {
+            constructor(index, total) {
+                this.color = pastelColors[Math.floor(Math.random() * pastelColors.length)];
+                this.index = index;
+                this.total = total;
+                this.reset();
+            }
+
+            reset() {
+                // Generate evenly distributed angle for star direction
+                const goldenAngle = Math.PI * (3 - Math.sqrt(5)); // Golden angle for even distribution
+                const angle = this.index * goldenAngle + Math.random() * 0.5; // Slight randomness
+                const distance = Math.random() * 50; // Small initial distance from center
+
+                this.x = Math.cos(angle) * distance;
+                this.y = Math.sin(angle) * distance;
+
+                // Distribute stars evenly throughout the entire depth range for continuous flow
+                this.z = (this.index / this.total) * params.depth + Math.random() * (params.depth / this.total);
+
+                this.prevX = this.x;
+                this.prevY = this.y;
+            }
+
+            update() {
+                this.prevX = this.x;
+                this.prevY = this.y;
+
+                this.z -= params.speed;
+
+                // Reset when star goes off screen or reaches the front
+                if (this.z <= 0) {
+                    // Keep the same direction but reset to far away
+                    const angle = Math.atan2(this.y, this.x);
+                    const distance = Math.random() * 50;
+                    this.x = Math.cos(angle) * distance;
+                    this.y = Math.sin(angle) * distance;
+                    this.z = params.depth;
+                }
+            }
+
+            draw() {
+                const centerX = canvas.width / 2;
+                const centerY = canvas.height / 2;
+
+                // Calculate screen position
+                const scale = params.depth / this.z;
+                const x = this.x * scale + centerX;
+                const y = this.y * scale + centerY;
+
+                // Calculate previous position for trail
+                const prevScale = params.depth / (this.z + params.speed);
+                const prevX = this.prevX * prevScale + centerX;
+                const prevY = this.prevY * prevScale + centerY;
+
+                // Don't draw if off screen
+                if (x < -100 || x > canvas.width + 100 || y < -100 || y > canvas.height + 100) {
+                    return;
+                }
+
+                // Calculate size based on depth (closer = bigger)
+                const size = (1 - this.z / params.depth) * params.starSize * 2;
+
+                // Calculate brightness based on depth
+                const depthFactor = (1 - this.z / params.depth);
+                const r = Math.floor(this.color.r * (0.5 + depthFactor * 0.5));
+                const g = Math.floor(this.color.g * (0.5 + depthFactor * 0.5));
+                const b = Math.floor(this.color.b * (0.5 + depthFactor * 0.5));
+
+                // Draw trail
+                if (params.trailLength > 0) {
+                    const trailGradient = ctx.createLinearGradient(prevX, prevY, x, y);
+                    trailGradient.addColorStop(0, `rgba(${r}, ${g}, ${b}, 0)`);
+                    trailGradient.addColorStop(1, `rgba(${r}, ${g}, ${b}, ${params.trailOpacity})`);
+
+                    ctx.strokeStyle = trailGradient;
+                    ctx.lineWidth = size;
+                    ctx.lineCap = 'round';
+                    ctx.beginPath();
+                    ctx.moveTo(prevX, prevY);
+                    ctx.lineTo(x, y);
+                    ctx.stroke();
+                }
+
+                // Draw star
+                ctx.fillStyle = `rgb(${r}, ${g}, ${b})`;
+                ctx.beginPath();
+                ctx.arc(x, y, size, 0, Math.PI * 2);
+                ctx.fill();
+
+                // Add glow for closer stars
+                if (this.z < params.depth / 3) {
+                    const glowGradient = ctx.createRadialGradient(x, y, 0, x, y, size * 3);
+                    glowGradient.addColorStop(0, `rgba(${r}, ${g}, ${b}, 0.4)`);
+                    glowGradient.addColorStop(1, `rgba(${r}, ${g}, ${b}, 0)`);
+                    ctx.fillStyle = glowGradient;
+                    ctx.beginPath();
+                    ctx.arc(x, y, size * 3, 0, Math.PI * 2);
+                    ctx.fill();
+                }
+            }
+        }
+
+        // Create stars
+        let stars = [];
+        function createStars() {
+            stars = [];
+            for (let i = 0; i < params.starCount; i++) {
+                stars.push(new Star(i, params.starCount));
+            }
+        }
+        createStars();
+
+        // Animation loop
+        function animate() {
+            // Create trail effect by drawing semi-transparent rectangle
+            ctx.fillStyle = `rgba(0, 0, 0, ${0.1 + params.trailLength / 500})`;
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            // Update and draw stars
+            stars.forEach(star => {
+                star.update();
+                star.draw();
+            });
+
+            requestAnimationFrame(animate);
+        }
+        animate();
+
+        // Control handlers
+        const controls = {
+            starCount: document.getElementById('starCount'),
+            speed: document.getElementById('speed'),
+            trailLength: document.getElementById('trailLength'),
+            starSize: document.getElementById('starSize'),
+            depth: document.getElementById('depth'),
+            trailOpacity: document.getElementById('trailOpacity')
+        };
+
+        const displays = {
+            starCount: document.getElementById('countValue'),
+            speed: document.getElementById('speedValue'),
+            trailLength: document.getElementById('trailValue'),
+            starSize: document.getElementById('sizeValue'),
+            depth: document.getElementById('depthValue'),
+            trailOpacity: document.getElementById('opacityValue')
+        };
+
+        // Update display values
+        function updateDisplays() {
+            displays.starCount.textContent = params.starCount;
+            displays.speed.textContent = params.speed.toFixed(1);
+            displays.trailLength.textContent = params.trailLength;
+            displays.starSize.textContent = params.starSize.toFixed(1);
+            displays.depth.textContent = params.depth;
+            displays.trailOpacity.textContent = params.trailOpacity.toFixed(1);
+        }
+
+        // Star count control
+        controls.starCount.addEventListener('input', (e) => {
+            params.starCount = parseInt(e.target.value);
+            createStars();
+            updateDisplays();
+        });
+
+        // Speed control
+        controls.speed.addEventListener('input', (e) => {
+            params.speed = parseFloat(e.target.value);
+            updateDisplays();
+        });
+
+        // Trail length control
+        controls.trailLength.addEventListener('input', (e) => {
+            params.trailLength = parseInt(e.target.value);
+            updateDisplays();
+        });
+
+        // Star size control
+        controls.starSize.addEventListener('input', (e) => {
+            params.starSize = parseFloat(e.target.value);
+            updateDisplays();
+        });
+
+        // Depth control
+        controls.depth.addEventListener('input', (e) => {
+            params.depth = parseInt(e.target.value);
+            updateDisplays();
+        });
+
+        // Trail opacity control
+        controls.trailOpacity.addEventListener('input', (e) => {
+            params.trailOpacity = parseFloat(e.target.value);
+            updateDisplays();
+        });
+
+        // Reset button
+        document.getElementById('resetBtn').addEventListener('click', () => {
+            params = {
+                starCount: 500,
+                speed: 1,
+                trailLength: 50,
+                starSize: 1.5,
+                depth: 1000,
+                trailOpacity: 0.8
+            };
+
+            controls.starCount.value = params.starCount;
+            controls.speed.value = params.speed;
+            controls.trailLength.value = params.trailLength;
+            controls.starSize.value = params.starSize;
+            controls.depth.value = params.depth;
+            controls.trailOpacity.value = params.trailOpacity;
+
+            createStars();
+            updateDisplays();
+        });
+
+        // Initialize displays
+        updateDisplays();
+
+        // Toggle minimize/maximize
+        const toggleBtn = document.getElementById('toggleBtn');
+        const controlsContent = document.querySelector('.controls-content');
+
+        toggleBtn.addEventListener('click', (e) => {
+            e.stopPropagation(); // Prevent drag from triggering
+            controlsPanel.classList.toggle('minimized');
+
+            if (controlsPanel.classList.contains('minimized')) {
+                toggleBtn.textContent = '+';
+            } else {
+                toggleBtn.textContent = '−';
+            }
+        });
+
+        // Make controls panel draggable
+        const controlsPanel = document.querySelector('.controls');
+        let isDragging = false;
+        let currentX;
+        let currentY;
+        let initialX;
+        let initialY;
+        let xOffset = 0;
+        let yOffset = 0;
+
+        controlsPanel.addEventListener('mousedown', dragStart);
+        document.addEventListener('mousemove', drag);
+        document.addEventListener('mouseup', dragEnd);
+
+        // Touch events for mobile
+        controlsPanel.addEventListener('touchstart', dragStart);
+        document.addEventListener('touchmove', drag);
+        document.addEventListener('touchend', dragEnd);
+
+        function dragStart(e) {
+            // Don't drag if clicking on slider or button
+            if (e.target.tagName === 'INPUT' || e.target.tagName === 'BUTTON') {
+                return;
+            }
+
+            if (e.type === 'touchstart') {
+                initialX = e.touches[0].clientX - xOffset;
+                initialY = e.touches[0].clientY - yOffset;
+            } else {
+                initialX = e.clientX - xOffset;
+                initialY = e.clientY - yOffset;
+            }
+
+            isDragging = true;
+        }
+
+        function drag(e) {
+            if (isDragging) {
+                e.preventDefault();
+
+                if (e.type === 'touchmove') {
+                    currentX = e.touches[0].clientX - initialX;
+                    currentY = e.touches[0].clientY - initialY;
+                } else {
+                    currentX = e.clientX - initialX;
+                    currentY = e.clientY - initialY;
+                }
+
+                xOffset = currentX;
+                yOffset = currentY;
+
+                setTranslate(currentX, currentY, controlsPanel);
+            }
+        }
+
+        function dragEnd(e) {
+            initialX = currentX;
+            initialY = currentY;
+            isDragging = false;
+        }
+
+        function setTranslate(xPos, yPos, el) {
+            el.style.transform = `translate3d(${xPos}px, ${yPos}px, 0)`;
+        }
+    </script>
+</body>
+</html>
