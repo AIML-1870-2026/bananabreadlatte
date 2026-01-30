@@ -1,0 +1,922 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Stellar Web - Interactive Particle Network</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: #000;
+            overflow: hidden;
+        }
+
+        canvas {
+            display: block;
+            background: #000;
+        }
+
+        .controls {
+            position: fixed;
+            top: 0;
+            right: -280px;
+            width: 280px;
+            height: 100vh;
+            background: rgba(10, 10, 15, 0.95);
+            padding: 20px;
+            color: #4dd4ff;
+            overflow-y: auto;
+            box-shadow: -4px 0 20px rgba(77, 212, 255, 0.3);
+            backdrop-filter: blur(10px);
+            border-left: 2px solid rgba(77, 212, 255, 0.3);
+            transition: right 0.3s ease;
+            z-index: 1000;
+        }
+
+        .controls.open {
+            right: 0;
+        }
+
+        .toggle-panel-btn {
+            position: fixed;
+            top: 50%;
+            right: 0;
+            transform: translateY(-50%);
+            background: rgba(10, 10, 15, 0.95);
+            border: 2px solid rgba(77, 212, 255, 0.5);
+            border-right: none;
+            border-radius: 8px 0 0 8px;
+            color: #4dd4ff;
+            padding: 15px 8px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: bold;
+            writing-mode: vertical-rl;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            transition: all 0.3s;
+            z-index: 999;
+            box-shadow: -2px 0 10px rgba(77, 212, 255, 0.3);
+        }
+
+        .toggle-panel-btn:hover {
+            background: rgba(77, 212, 255, 0.2);
+            box-shadow: -4px 0 20px rgba(77, 212, 255, 0.5);
+        }
+
+        .toggle-panel-btn.open {
+            right: 280px;
+        }
+
+        .controls h2 {
+            margin-bottom: 15px;
+            font-size: 16px;
+            color: #4dd4ff;
+            border-bottom: 2px solid rgba(77, 212, 255, 0.5);
+            padding-bottom: 8px;
+            text-align: center;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .control-group {
+            margin-bottom: 15px;
+        }
+
+        .control-group label {
+            display: block;
+            margin-bottom: 6px;
+            font-size: 12px;
+            color: #4dd4ff;
+            font-weight: 600;
+        }
+
+        .control-group input[type="range"] {
+            width: 100%;
+            height: 5px;
+            border-radius: 3px;
+            background: rgba(77, 212, 255, 0.2);
+            outline: none;
+            -webkit-appearance: none;
+        }
+
+        .control-group input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 14px;
+            height: 14px;
+            border-radius: 50%;
+            background: #4dd4ff;
+            cursor: pointer;
+            transition: all 0.2s;
+            box-shadow: 0 0 5px rgba(77, 212, 255, 0.5);
+        }
+
+        .control-group input[type="range"]::-webkit-slider-thumb:hover {
+            background: #6ee0ff;
+            transform: scale(1.3);
+            box-shadow: 0 0 10px rgba(77, 212, 255, 0.8);
+        }
+
+        .control-group input[type="range"]::-moz-range-thumb {
+            width: 14px;
+            height: 14px;
+            border-radius: 50%;
+            background: #4dd4ff;
+            cursor: pointer;
+            border: none;
+            transition: all 0.2s;
+            box-shadow: 0 0 5px rgba(77, 212, 255, 0.5);
+        }
+
+        .control-group input[type="range"]::-moz-range-thumb:hover {
+            background: #6ee0ff;
+            transform: scale(1.3);
+            box-shadow: 0 0 10px rgba(77, 212, 255, 0.8);
+        }
+
+        .value-display {
+            display: inline-block;
+            float: right;
+            color: #6ee0ff;
+            font-weight: bold;
+            font-size: 12px;
+        }
+
+        .reset-btn {
+            width: 100%;
+            padding: 10px;
+            margin-top: 10px;
+            background: rgba(77, 212, 255, 0.3);
+            border: 1px solid rgba(77, 212, 255, 0.5);
+            border-radius: 6px;
+            color: #4dd4ff;
+            font-weight: bold;
+            font-size: 12px;
+            cursor: pointer;
+            transition: all 0.3s;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .reset-btn:hover {
+            background: rgba(77, 212, 255, 0.5);
+            color: white;
+            box-shadow: 0 0 15px rgba(77, 212, 255, 0.5);
+        }
+
+        .info {
+            position: fixed;
+            bottom: 20px;
+            left: 20px;
+            color: rgba(77, 212, 255, 0.6);
+            font-size: 12px;
+            text-shadow: 0 0 10px rgba(77, 212, 255, 0.3);
+        }
+
+        .stats-panel {
+            position: fixed;
+            top: 20px;
+            left: 20px;
+            background: rgba(10, 10, 15, 0.9);
+            padding: 15px;
+            border-radius: 10px;
+            color: #4dd4ff;
+            min-width: 220px;
+            box-shadow: 0 4px 20px rgba(77, 212, 255, 0.3);
+            backdrop-filter: blur(10px);
+            border: 2px solid rgba(77, 212, 255, 0.3);
+        }
+
+        .stats-panel h3 {
+            margin: 0 0 10px 0;
+            font-size: 14px;
+            color: #4dd4ff;
+            border-bottom: 2px solid rgba(77, 212, 255, 0.5);
+            padding-bottom: 5px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .stat-item {
+            display: flex;
+            justify-content: space-between;
+            margin: 8px 0;
+            font-size: 12px;
+        }
+
+        .stat-label {
+            color: rgba(77, 212, 255, 0.8);
+        }
+
+        .stat-value {
+            color: #6ee0ff;
+            font-weight: bold;
+        }
+
+        /* Custom scrollbar */
+        .controls::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        .controls::-webkit-scrollbar-track {
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 3px;
+        }
+
+        .controls::-webkit-scrollbar-thumb {
+            background: rgba(77, 212, 255, 0.5);
+            border-radius: 3px;
+        }
+
+        .controls::-webkit-scrollbar-thumb:hover {
+            background: rgba(77, 212, 255, 0.8);
+        }
+    </style>
+</head>
+<body>
+    <canvas id="stellarWeb"></canvas>
+
+    <button class="toggle-panel-btn" id="togglePanelBtn">Controls</button>
+
+    <div class="controls" id="controlsPanel">
+        <h2>Stellar Web Controls</h2>
+
+        <div class="control-group">
+            <label>
+                Node Count
+                <span class="value-display" id="nodeCountValue">100</span>
+            </label>
+            <input type="range" id="nodeCount" min="20" max="300" value="100" step="10">
+        </div>
+
+        <div class="control-group">
+            <label>
+                Node Size
+                <span class="value-display" id="nodeSizeValue">3</span>
+            </label>
+            <input type="range" id="nodeSize" min="1" max="8" value="3" step="0.5">
+        </div>
+
+        <div class="control-group">
+            <label>
+                Movement Speed
+                <span class="value-display" id="speedValue">0.5</span>
+            </label>
+            <input type="range" id="speed" min="0" max="2" value="0.5" step="0.1">
+        </div>
+
+        <div class="control-group">
+            <label>
+                Connectivity Radius
+                <span class="value-display" id="radiusValue">150</span>
+            </label>
+            <input type="range" id="connectRadius" min="50" max="300" value="150" step="10">
+        </div>
+
+        <div class="control-group">
+            <label>
+                Edge Thickness
+                <span class="value-display" id="thicknessValue">1.5</span>
+            </label>
+            <input type="range" id="edgeThickness" min="0.5" max="4" value="1.5" step="0.25">
+        </div>
+
+        <div class="control-group">
+            <label>
+                Edge Opacity
+                <span class="value-display" id="edgeOpacityValue">0.4</span>
+            </label>
+            <input type="range" id="edgeOpacity" min="0.1" max="1" value="0.4" step="0.05">
+        </div>
+
+        <div class="control-group">
+            <label>
+                Node Opacity
+                <span class="value-display" id="nodeOpacityValue">0.8</span>
+            </label>
+            <input type="range" id="nodeOpacity" min="0.1" max="1" value="0.8" step="0.05">
+        </div>
+
+        <div class="control-group">
+            <label>
+                3D Depth Range
+                <span class="value-display" id="depthValue">600</span>
+            </label>
+            <input type="range" id="depthRange" min="200" max="1000" value="600" step="50">
+        </div>
+
+        <div class="control-group">
+            <label>
+                Rotation Speed
+                <span class="value-display" id="rotationValue">0.2</span>
+            </label>
+            <input type="range" id="rotationSpeed" min="0" max="1" value="0.2" step="0.05">
+        </div>
+
+        <div class="control-group">
+            <label>
+                Node Glow Intensity
+                <span class="value-display" id="glowValue">0.5</span>
+            </label>
+            <input type="range" id="glowIntensity" min="0" max="1" value="0.5" step="0.1">
+        </div>
+
+        <div class="control-group">
+            <label>
+                Pulse Speed
+                <span class="value-display" id="pulseValue">1.0</span>
+            </label>
+            <input type="range" id="pulseSpeed" min="0" max="3" value="1.0" step="0.1">
+        </div>
+
+        <div class="control-group">
+            <label>
+                Mouse Interaction
+                <span class="value-display" id="mouseValue">Attract</span>
+            </label>
+            <input type="range" id="mouseInteraction" min="-2" max="2" value="1" step="0.5">
+        </div>
+
+        <button class="reset-btn" id="resetBtn">Reset to Defaults</button>
+    </div>
+
+    <div class="stats-panel">
+        <h3>Network Statistics</h3>
+        <div class="stat-item">
+            <span class="stat-label">Total Edges:</span>
+            <span class="stat-value" id="totalEdges">0</span>
+        </div>
+        <div class="stat-item">
+            <span class="stat-label">Avg Connections:</span>
+            <span class="stat-value" id="avgConnections">0.0</span>
+        </div>
+        <div class="stat-item">
+            <span class="stat-label">Network Density:</span>
+            <span class="stat-value" id="networkDensity">0.0%</span>
+        </div>
+        <div class="stat-item">
+            <span class="stat-label">Active Nodes:</span>
+            <span class="stat-value" id="activeNodes">0</span>
+        </div>
+        <div class="stat-item">
+            <span class="stat-label">FPS:</span>
+            <span class="stat-value" id="fps">60</span>
+        </div>
+    </div>
+
+    <div class="info">
+        Stellar Web - Interactive 3D Particle Network System
+    </div>
+
+    <script>
+        const canvas = document.getElementById('stellarWeb');
+        const ctx = canvas.getContext('2d');
+
+        // Set canvas size
+        function resizeCanvas() {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+        }
+        resizeCanvas();
+        window.addEventListener('resize', resizeCanvas);
+
+        // Parameters
+        let params = {
+            nodeCount: 100,
+            nodeSize: 3,
+            speed: 0.5,
+            connectRadius: 150,
+            edgeThickness: 1.5,
+            edgeOpacity: 0.4,
+            nodeOpacity: 0.8,
+            depthRange: 600,
+            rotationSpeed: 0.2,
+            glowIntensity: 0.5,
+            pulseSpeed: 1.0,
+            mouseInteraction: 1.0
+        };
+
+        // Mouse tracking
+        let mouse = {
+            x: canvas.width / 2,
+            y: canvas.height / 2,
+            z: 0,
+            active: false
+        };
+
+        // FPS tracking
+        let lastTime = performance.now();
+        let frameCount = 0;
+        let fps = 60;
+
+        // Animation time for pulsing effects
+        let animationTime = 0;
+
+        // Color palette for nodes
+        const colors = [
+            { r: 77, g: 212, b: 255 },   // Cyan
+            { r: 138, g: 180, b: 248 },  // Blue
+            { r: 180, g: 142, b: 255 },  // Purple
+            { r: 255, g: 138, b: 200 },  // Pink
+            { r: 138, g: 255, b: 200 },  // Mint
+            { r: 255, g: 200, b: 138 }   // Orange
+        ];
+
+        // Node class representing particles in 3D space
+        class Node {
+            constructor() {
+                this.color = colors[Math.floor(Math.random() * colors.length)];
+                this.connectionCount = 0;
+                this.reset();
+            }
+
+            reset() {
+                // Position in 3D space
+                this.x = Math.random() * canvas.width - canvas.width / 2;
+                this.y = Math.random() * canvas.height - canvas.height / 2;
+                this.z = Math.random() * params.depthRange - params.depthRange / 2;
+
+                // Velocity
+                this.vx = (Math.random() - 0.5) * params.speed;
+                this.vy = (Math.random() - 0.5) * params.speed;
+                this.vz = (Math.random() - 0.5) * params.speed;
+
+                // Rotation angles for 3D effect
+                this.angleX = 0;
+                this.angleY = 0;
+
+                // Pulse phase offset for varied pulsing
+                this.pulsePhase = Math.random() * Math.PI * 2;
+            }
+
+            update() {
+                // Mouse interaction
+                if (mouse.active && params.mouseInteraction !== 0) {
+                    const dx = (mouse.x - canvas.width / 2) - this.x;
+                    const dy = (mouse.y - canvas.height / 2) - this.y;
+                    const dz = mouse.z - this.z;
+                    const distance = Math.sqrt(dx * dx + dy * dy + dz * dz);
+
+                    if (distance < 300 && distance > 0) {
+                        const force = (params.mouseInteraction * 200) / (distance * distance);
+                        this.vx += (dx / distance) * force;
+                        this.vy += (dy / distance) * force;
+                        this.vz += (dz / distance) * force;
+                    }
+                }
+
+                // Update position
+                this.x += this.vx;
+                this.y += this.vy;
+                this.z += this.vz;
+
+                // Update rotation
+                this.angleX += params.rotationSpeed * 0.01;
+                this.angleY += params.rotationSpeed * 0.01;
+
+                // Wrap around edges
+                const halfWidth = canvas.width / 2;
+                const halfHeight = canvas.height / 2;
+                const halfDepth = params.depthRange / 2;
+
+                if (this.x > halfWidth) this.x = -halfWidth;
+                if (this.x < -halfWidth) this.x = halfWidth;
+                if (this.y > halfHeight) this.y = -halfHeight;
+                if (this.y < -halfHeight) this.y = halfHeight;
+                if (this.z > halfDepth) this.z = -halfDepth;
+                if (this.z < -halfDepth) this.z = halfDepth;
+
+                // Adjust velocity based on speed parameter with damping
+                const currentSpeed = Math.sqrt(this.vx * this.vx + this.vy * this.vy + this.vz * this.vz);
+                const targetSpeed = params.speed;
+                if (currentSpeed > 0) {
+                    const damping = 0.95; // Slight damping for smoother motion
+                    this.vx *= damping;
+                    this.vy *= damping;
+                    this.vz *= damping;
+
+                    // Maintain minimum speed
+                    const dampedSpeed = Math.sqrt(this.vx * this.vx + this.vy * this.vy + this.vz * this.vz);
+                    if (dampedSpeed > 0 && dampedSpeed < targetSpeed) {
+                        const ratio = targetSpeed / dampedSpeed;
+                        this.vx *= ratio;
+                        this.vy *= ratio;
+                        this.vz *= ratio;
+                    }
+                }
+            }
+
+            // Project 3D coordinates to 2D screen space
+            project() {
+                const perspective = params.depthRange;
+                const scale = perspective / (perspective + this.z);
+
+                // Apply 3D rotation
+                const rotatedX = this.x * Math.cos(this.angleY) - this.z * Math.sin(this.angleY);
+                const rotatedZ = this.x * Math.sin(this.angleY) + this.z * Math.cos(this.angleY);
+                const rotatedY = this.y * Math.cos(this.angleX) - rotatedZ * Math.sin(this.angleX);
+
+                return {
+                    x: rotatedX * scale + canvas.width / 2,
+                    y: rotatedY * scale + canvas.height / 2,
+                    scale: scale
+                };
+            }
+
+            draw() {
+                const proj = this.project();
+
+                // Calculate velocity magnitude for color effects
+                const velocity = Math.sqrt(this.vx * this.vx + this.vy * this.vy + this.vz * this.vz);
+                const velocityFactor = Math.min(velocity / 2, 1);
+
+                // Pulsing effect
+                const pulse = params.pulseSpeed > 0 ?
+                    1 + Math.sin(animationTime * params.pulseSpeed + this.pulsePhase) * 0.3 : 1;
+
+                // Calculate size based on depth with enhanced depth effect and pulse
+                const depthSizeFactor = proj.scale * 1.5; // Enhanced depth effect
+                const size = params.nodeSize * depthSizeFactor * pulse;
+
+                // Calculate brightness and opacity based on depth (closer = brighter)
+                const depthFactor = Math.pow(proj.scale, 0.7); // Non-linear depth for more dramatic effect
+                const depthOpacity = 0.3 + depthFactor * 0.7; // Vary opacity with depth
+
+                // Color based on velocity and depth
+                const r = Math.floor(this.color.r * (0.5 + depthFactor * 0.5) * (1 + velocityFactor * 0.3));
+                const g = Math.floor(this.color.g * (0.5 + depthFactor * 0.5) * (1 + velocityFactor * 0.3));
+                const b = Math.floor(this.color.b * (0.5 + depthFactor * 0.5) * (1 + velocityFactor * 0.3));
+
+                // Draw glow with pulsing
+                if (params.glowIntensity > 0) {
+                    const glowSize = size * (2 + params.glowIntensity * 3) * pulse;
+                    const glowGradient = ctx.createRadialGradient(
+                        proj.x, proj.y, 0,
+                        proj.x, proj.y, glowSize
+                    );
+                    const glowOpacity = params.glowIntensity * 0.3 * depthOpacity;
+                    glowGradient.addColorStop(0, `rgba(${r}, ${g}, ${b}, ${glowOpacity})`);
+                    glowGradient.addColorStop(1, `rgba(${r}, ${g}, ${b}, 0)`);
+
+                    ctx.fillStyle = glowGradient;
+                    ctx.beginPath();
+                    ctx.arc(proj.x, proj.y, glowSize, 0, Math.PI * 2);
+                    ctx.fill();
+                }
+
+                // Draw node with depth-based opacity
+                const nodeOpacity = params.nodeOpacity * depthOpacity;
+                ctx.fillStyle = `rgba(${r}, ${g}, ${b}, ${nodeOpacity})`;
+                ctx.beginPath();
+                ctx.arc(proj.x, proj.y, size, 0, Math.PI * 2);
+                ctx.fill();
+
+                // Add bright core for nodes with many connections
+                if (this.connectionCount > 3) {
+                    ctx.fillStyle = `rgba(255, 255, 255, ${0.3 * depthOpacity})`;
+                    ctx.beginPath();
+                    ctx.arc(proj.x, proj.y, size * 0.4, 0, Math.PI * 2);
+                    ctx.fill();
+                }
+            }
+
+            // Calculate 3D distance to another node
+            distanceTo(other) {
+                const dx = this.x - other.x;
+                const dy = this.y - other.y;
+                const dz = this.z - other.z;
+                return Math.sqrt(dx * dx + dy * dy + dz * dz);
+            }
+        }
+
+        // Create nodes
+        let nodes = [];
+        function createNodes() {
+            nodes = [];
+            for (let i = 0; i < params.nodeCount; i++) {
+                nodes.push(new Node());
+            }
+        }
+        createNodes();
+
+        // Draw edges between nearby nodes
+        function drawEdges() {
+            let totalEdges = 0;
+            let totalConnections = 0;
+
+            // Reset connection counts
+            nodes.forEach(node => node.connectionCount = 0);
+
+            for (let i = 0; i < nodes.length; i++) {
+                for (let j = i + 1; j < nodes.length; j++) {
+                    const distance = nodes[i].distanceTo(nodes[j]);
+
+                    if (distance < params.connectRadius) {
+                        totalEdges++;
+                        nodes[i].connectionCount++;
+                        nodes[j].connectionCount++;
+
+                        const proj1 = nodes[i].project();
+                        const proj2 = nodes[j].project();
+
+                        // Calculate opacity based on distance (closer = more opaque)
+                        const distanceFactor = 1 - (distance / params.connectRadius);
+
+                        // Enhanced depth-based opacity
+                        const avgScale = (proj1.scale + proj2.scale) / 2;
+                        const depthOpacity = Math.pow(avgScale, 0.8);
+
+                        // Color gradient based on edge length - shorter edges are brighter
+                        const lengthColorFactor = 0.5 + distanceFactor * 0.5;
+
+                        // Pulsing effect on edges
+                        const edgePulse = params.pulseSpeed > 0 ?
+                            1 + Math.sin(animationTime * params.pulseSpeed * 0.5) * 0.2 : 1;
+
+                        const opacity = params.edgeOpacity * distanceFactor * depthOpacity * edgePulse;
+
+                        // Average depth for edge color
+                        const avgDepth = Math.pow(avgScale, 0.7);
+
+                        // Create gradient from node1 color to node2 color
+                        const gradient = ctx.createLinearGradient(
+                            proj1.x, proj1.y,
+                            proj2.x, proj2.y
+                        );
+
+                        const r1 = Math.floor(nodes[i].color.r * avgDepth * lengthColorFactor);
+                        const g1 = Math.floor(nodes[i].color.g * avgDepth * lengthColorFactor);
+                        const b1 = Math.floor(nodes[i].color.b * avgDepth * lengthColorFactor);
+
+                        const r2 = Math.floor(nodes[j].color.r * avgDepth * lengthColorFactor);
+                        const g2 = Math.floor(nodes[j].color.g * avgDepth * lengthColorFactor);
+                        const b2 = Math.floor(nodes[j].color.b * avgDepth * lengthColorFactor);
+
+                        gradient.addColorStop(0, `rgba(${r1}, ${g1}, ${b1}, ${opacity})`);
+                        gradient.addColorStop(1, `rgba(${r2}, ${g2}, ${b2}, ${opacity})`);
+
+                        ctx.strokeStyle = gradient;
+
+                        // Thickness varies with depth
+                        const thickness = params.edgeThickness * avgScale * edgePulse;
+                        ctx.lineWidth = thickness;
+                        ctx.lineCap = 'round';
+                        ctx.beginPath();
+                        ctx.moveTo(proj1.x, proj1.y);
+                        ctx.lineTo(proj2.x, proj2.y);
+                        ctx.stroke();
+                    }
+                }
+            }
+
+            // Update statistics
+            updateNetworkStats(totalEdges);
+        }
+
+        // Update network statistics
+        function updateNetworkStats(totalEdges) {
+            const avgConnections = nodes.length > 0 ? (totalEdges * 2 / nodes.length).toFixed(1) : 0;
+            const maxPossibleEdges = (nodes.length * (nodes.length - 1)) / 2;
+            const density = maxPossibleEdges > 0 ? ((totalEdges / maxPossibleEdges) * 100).toFixed(1) : 0;
+
+            document.getElementById('totalEdges').textContent = totalEdges;
+            document.getElementById('avgConnections').textContent = avgConnections;
+            document.getElementById('networkDensity').textContent = density + '%';
+            document.getElementById('activeNodes').textContent = nodes.length;
+            document.getElementById('fps').textContent = fps;
+        }
+
+        // Animation loop
+        function animate(currentTime) {
+            // Update animation time
+            animationTime = currentTime * 0.001; // Convert to seconds
+
+            // Calculate FPS
+            frameCount++;
+            if (currentTime - lastTime >= 1000) {
+                fps = Math.round(frameCount * 1000 / (currentTime - lastTime));
+                frameCount = 0;
+                lastTime = currentTime;
+            }
+
+            // Clear canvas with trail effect
+            ctx.fillStyle = 'rgba(0, 0, 0, 0.15)';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            // Sort nodes by depth (back to front for proper rendering)
+            nodes.sort((a, b) => a.z - b.z);
+
+            // Draw edges first
+            drawEdges();
+
+            // Update and draw nodes
+            nodes.forEach(node => {
+                node.update();
+                node.draw();
+            });
+
+            requestAnimationFrame(animate);
+        }
+        requestAnimationFrame(animate);
+
+        // Mouse tracking
+        canvas.addEventListener('mousemove', (e) => {
+            mouse.x = e.clientX;
+            mouse.y = e.clientY;
+            mouse.active = true;
+        });
+
+        canvas.addEventListener('mouseleave', () => {
+            mouse.active = false;
+        });
+
+        // Mouse wheel for Z-axis interaction
+        canvas.addEventListener('wheel', (e) => {
+            e.preventDefault();
+            mouse.z += e.deltaY * 0.5;
+            mouse.z = Math.max(-params.depthRange / 2, Math.min(params.depthRange / 2, mouse.z));
+        }, { passive: false });
+
+        // Control handlers
+        const controls = {
+            nodeCount: document.getElementById('nodeCount'),
+            nodeSize: document.getElementById('nodeSize'),
+            speed: document.getElementById('speed'),
+            connectRadius: document.getElementById('connectRadius'),
+            edgeThickness: document.getElementById('edgeThickness'),
+            edgeOpacity: document.getElementById('edgeOpacity'),
+            nodeOpacity: document.getElementById('nodeOpacity'),
+            depthRange: document.getElementById('depthRange'),
+            rotationSpeed: document.getElementById('rotationSpeed'),
+            glowIntensity: document.getElementById('glowIntensity'),
+            pulseSpeed: document.getElementById('pulseSpeed'),
+            mouseInteraction: document.getElementById('mouseInteraction')
+        };
+
+        const displays = {
+            nodeCount: document.getElementById('nodeCountValue'),
+            nodeSize: document.getElementById('nodeSizeValue'),
+            speed: document.getElementById('speedValue'),
+            connectRadius: document.getElementById('radiusValue'),
+            edgeThickness: document.getElementById('thicknessValue'),
+            edgeOpacity: document.getElementById('edgeOpacityValue'),
+            nodeOpacity: document.getElementById('nodeOpacityValue'),
+            depthRange: document.getElementById('depthValue'),
+            rotationSpeed: document.getElementById('rotationValue'),
+            glowIntensity: document.getElementById('glowValue'),
+            pulseSpeed: document.getElementById('pulseValue'),
+            mouseInteraction: document.getElementById('mouseValue')
+        };
+
+        // Update display values
+        function updateDisplays() {
+            displays.nodeCount.textContent = params.nodeCount;
+            displays.nodeSize.textContent = params.nodeSize.toFixed(1);
+            displays.speed.textContent = params.speed.toFixed(1);
+            displays.connectRadius.textContent = params.connectRadius;
+            displays.edgeThickness.textContent = params.edgeThickness.toFixed(2);
+            displays.edgeOpacity.textContent = params.edgeOpacity.toFixed(2);
+            displays.nodeOpacity.textContent = params.nodeOpacity.toFixed(2);
+            displays.depthRange.textContent = params.depthRange;
+            displays.rotationSpeed.textContent = params.rotationSpeed.toFixed(2);
+            displays.glowIntensity.textContent = params.glowIntensity.toFixed(1);
+            displays.pulseSpeed.textContent = params.pulseSpeed.toFixed(1);
+
+            // Update mouse interaction display
+            if (params.mouseInteraction > 0) {
+                displays.mouseInteraction.textContent = 'Attract (' + params.mouseInteraction.toFixed(1) + ')';
+            } else if (params.mouseInteraction < 0) {
+                displays.mouseInteraction.textContent = 'Repel (' + Math.abs(params.mouseInteraction).toFixed(1) + ')';
+            } else {
+                displays.mouseInteraction.textContent = 'Off';
+            }
+        }
+
+        // Node count control
+        controls.nodeCount.addEventListener('input', (e) => {
+            params.nodeCount = parseInt(e.target.value);
+            createNodes();
+            updateDisplays();
+        });
+
+        // Node size control
+        controls.nodeSize.addEventListener('input', (e) => {
+            params.nodeSize = parseFloat(e.target.value);
+            updateDisplays();
+        });
+
+        // Speed control
+        controls.speed.addEventListener('input', (e) => {
+            params.speed = parseFloat(e.target.value);
+            updateDisplays();
+        });
+
+        // Connectivity radius control
+        controls.connectRadius.addEventListener('input', (e) => {
+            params.connectRadius = parseInt(e.target.value);
+            updateDisplays();
+        });
+
+        // Edge thickness control
+        controls.edgeThickness.addEventListener('input', (e) => {
+            params.edgeThickness = parseFloat(e.target.value);
+            updateDisplays();
+        });
+
+        // Edge opacity control
+        controls.edgeOpacity.addEventListener('input', (e) => {
+            params.edgeOpacity = parseFloat(e.target.value);
+            updateDisplays();
+        });
+
+        // Node opacity control
+        controls.nodeOpacity.addEventListener('input', (e) => {
+            params.nodeOpacity = parseFloat(e.target.value);
+            updateDisplays();
+        });
+
+        // Depth range control
+        controls.depthRange.addEventListener('input', (e) => {
+            params.depthRange = parseInt(e.target.value);
+            updateDisplays();
+        });
+
+        // Rotation speed control
+        controls.rotationSpeed.addEventListener('input', (e) => {
+            params.rotationSpeed = parseFloat(e.target.value);
+            updateDisplays();
+        });
+
+        // Glow intensity control
+        controls.glowIntensity.addEventListener('input', (e) => {
+            params.glowIntensity = parseFloat(e.target.value);
+            updateDisplays();
+        });
+
+        // Pulse speed control
+        controls.pulseSpeed.addEventListener('input', (e) => {
+            params.pulseSpeed = parseFloat(e.target.value);
+            updateDisplays();
+        });
+
+        // Mouse interaction control
+        controls.mouseInteraction.addEventListener('input', (e) => {
+            params.mouseInteraction = parseFloat(e.target.value);
+            updateDisplays();
+        });
+
+        // Reset button
+        document.getElementById('resetBtn').addEventListener('click', () => {
+            params = {
+                nodeCount: 100,
+                nodeSize: 3,
+                speed: 0.5,
+                connectRadius: 150,
+                edgeThickness: 1.5,
+                edgeOpacity: 0.4,
+                nodeOpacity: 0.8,
+                depthRange: 600,
+                rotationSpeed: 0.2,
+                glowIntensity: 0.5,
+                pulseSpeed: 1.0,
+                mouseInteraction: 1.0
+            };
+
+            controls.nodeCount.value = params.nodeCount;
+            controls.nodeSize.value = params.nodeSize;
+            controls.speed.value = params.speed;
+            controls.connectRadius.value = params.connectRadius;
+            controls.edgeThickness.value = params.edgeThickness;
+            controls.edgeOpacity.value = params.edgeOpacity;
+            controls.nodeOpacity.value = params.nodeOpacity;
+            controls.depthRange.value = params.depthRange;
+            controls.rotationSpeed.value = params.rotationSpeed;
+            controls.glowIntensity.value = params.glowIntensity;
+            controls.pulseSpeed.value = params.pulseSpeed;
+            controls.mouseInteraction.value = params.mouseInteraction;
+
+            createNodes();
+            updateDisplays();
+        });
+
+        // Toggle panel button
+        const togglePanelBtn = document.getElementById('togglePanelBtn');
+        const controlsPanel = document.getElementById('controlsPanel');
+
+        togglePanelBtn.addEventListener('click', () => {
+            controlsPanel.classList.toggle('open');
+            togglePanelBtn.classList.toggle('open');
+        });
+
+        // Initialize displays
+        updateDisplays();
+    </script>
+</body>
+</html>
