@@ -1,0 +1,709 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bread Chase</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Arial', sans-serif;
+            background: linear-gradient(45deg, #f5e6d3 25%, #fff9f0 25%, #fff9f0 50%, #f5e6d3 50%, #f5e6d3 75%, #fff9f0 75%, #fff9f0);
+            background-size: 40px 40px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            overflow: hidden;
+        }
+
+        #gameContainer {
+            position: relative;
+            background: #fff;
+            border-radius: 10px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+            padding: 20px;
+        }
+
+        #hud {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px 20px;
+            background: linear-gradient(135deg, #8B4513, #A0522D);
+            color: white;
+            border-radius: 8px;
+            margin-bottom: 10px;
+            font-weight: bold;
+        }
+
+        #score, #length {
+            font-size: 18px;
+        }
+
+        #powerUpDisplay {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+            min-width: 150px;
+            justify-content: center;
+        }
+
+        .powerup-icon {
+            font-size: 24px;
+            animation: pulse 1s infinite;
+        }
+
+        .powerup-timer {
+            font-size: 14px;
+            background: rgba(255,255,255,0.3);
+            padding: 2px 8px;
+            border-radius: 4px;
+        }
+
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.1); }
+        }
+
+        #gameCanvas {
+            border: 8px solid transparent;
+            border-image: repeating-linear-gradient(
+                45deg,
+                rgba(200, 220, 255, 0.6),
+                rgba(200, 220, 255, 0.6) 10px,
+                rgba(180, 200, 235, 0.6) 10px,
+                rgba(180, 200, 235, 0.6) 20px
+            ) 8;
+            background: #fafafa;
+            display: block;
+            box-shadow: inset 0 0 20px rgba(0,0,0,0.1);
+        }
+
+        #startScreen, #gameOverScreen {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(255, 255, 255, 0.95);
+            padding: 40px;
+            border-radius: 15px;
+            text-align: center;
+            box-shadow: 0 10px 50px rgba(0,0,0,0.3);
+            z-index: 10;
+        }
+
+        #startScreen h1, #gameOverScreen h1 {
+            color: #8B4513;
+            font-size: 48px;
+            margin-bottom: 20px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.1);
+        }
+
+        .instructions {
+            margin: 20px 0;
+            color: #555;
+            line-height: 1.6;
+        }
+
+        button {
+            background: linear-gradient(135deg, #8B4513, #A0522D);
+            color: white;
+            border: none;
+            padding: 15px 40px;
+            font-size: 20px;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: transform 0.2s;
+            font-weight: bold;
+        }
+
+        button:hover {
+            transform: scale(1.05);
+        }
+
+        button:active {
+            transform: scale(0.95);
+        }
+
+        .hidden {
+            display: none;
+        }
+
+        #finalScore {
+            font-size: 24px;
+            color: #333;
+            margin: 20px 0;
+        }
+
+        .highlight {
+            color: #8B4513;
+            font-weight: bold;
+        }
+
+        #legend {
+            margin-top: 10px;
+            padding: 15px;
+            background: #f9f9f9;
+            border-radius: 8px;
+            font-size: 13px;
+            line-height: 1.8;
+        }
+
+        #legend h3 {
+            color: #8B4513;
+            margin-bottom: 10px;
+            font-size: 16px;
+        }
+
+        .legend-section {
+            margin-bottom: 10px;
+        }
+
+        .legend-item {
+            display: inline-block;
+            margin-right: 15px;
+            white-space: nowrap;
+        }
+
+        .legend-item .emoji {
+            font-size: 16px;
+            margin-right: 5px;
+        }
+    </style>
+</head>
+<body>
+    <div id="gameContainer">
+        <div id="hud">
+            <div id="score">Score: 0</div>
+            <div id="powerUpDisplay"></div>
+            <div id="length">Length: 3</div>
+        </div>
+        <canvas id="gameCanvas" width="600" height="600"></canvas>
+
+        <div id="legend">
+            <h3>Game Guide</h3>
+            <div class="legend-section">
+                <strong>Food:</strong><br>
+                <span class="legend-item"><span class="emoji">🍌</span>Banana (+10 pts, grow)</span>
+                <span class="legend-item"><span class="emoji">🧊</span>Sugar Cube (+50 pts, spawns mouth!)</span>
+            </div>
+            <div class="legend-section">
+                <strong>Power-ups:</strong><br>
+                <span class="legend-item"><span class="emoji">☕</span>Coffee (speed boost)</span>
+                <span class="legend-item"><span class="emoji">🥜</span>Peanut Butter (slow-mo)</span>
+                <span class="legend-item"><span class="emoji">🍓</span>Strawberry (2x score)</span>
+                <span class="legend-item"><span class="emoji">🧀</span>Cheese (invincibility)</span>
+                <span class="legend-item"><span class="emoji">🥨</span>Pretzel (shrink)</span>
+            </div>
+        </div>
+
+        <div id="startScreen">
+            <h1>🍞 Bread Chase 🍌</h1>
+            <div class="instructions">
+                <p><strong>Controls:</strong> Arrow Keys or WASD</p>
+                <p>Eat bananas to grow!</p>
+                <p>Collect power-ups for special abilities</p>
+                <p>⚠️ Sugar cubes spawn the chomping mouth!</p>
+                <p>Don't hit the walls or you'll get wrapped!</p>
+            </div>
+            <button onclick="game.start()">Start Game</button>
+        </div>
+
+        <div id="gameOverScreen" class="hidden">
+            <h1>Game Over!</h1>
+            <div id="finalScore"></div>
+            <button onclick="game.restart()">Play Again</button>
+        </div>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+        const GRID_SIZE = 30;
+        const CELL_SIZE = canvas.width / GRID_SIZE;
+
+        class Game {
+            constructor() {
+                this.score = 0;
+                this.bread = null;
+                this.banana = null;
+                this.sugarCube = null;
+                this.powerUp = null;
+                this.mouth = null;
+                this.gameRunning = false;
+                this.activePowerUps = [];
+                this.frozen = false;
+                this.frozenTime = 0;
+                this.lastPowerUpSpawn = 0;
+                this.particles = [];
+                this.scoreMultiplier = 1;
+                this.speed = 8; // Move every 8 frames
+                this.frameCount = 0;
+                this.setupControls();
+            }
+
+            setupControls() {
+                document.addEventListener('keydown', (e) => {
+                    if (!this.gameRunning || this.frozen) return;
+
+                    const key = e.key.toLowerCase();
+                    const bread = this.bread;
+
+                    if ((key === 'arrowup' || key === 'w') && bread.direction.y !== 1) {
+                        bread.nextDirection = { x: 0, y: -1 };
+                    } else if ((key === 'arrowdown' || key === 's') && bread.direction.y !== -1) {
+                        bread.nextDirection = { x: 0, y: 1 };
+                    } else if ((key === 'arrowleft' || key === 'a') && bread.direction.x !== 1) {
+                        bread.nextDirection = { x: -1, y: 0 };
+                    } else if ((key === 'arrowright' || key === 'd') && bread.direction.x !== -1) {
+                        bread.nextDirection = { x: 1, y: 0 };
+                    }
+                });
+            }
+
+            start() {
+                document.getElementById('startScreen').classList.add('hidden');
+                this.reset();
+                this.gameRunning = true;
+                this.gameLoop();
+            }
+
+            reset() {
+                this.score = 0;
+                this.scoreMultiplier = 1;
+                this.speed = 8;
+                this.frameCount = 0;
+                this.frozen = false;
+                this.activePowerUps = [];
+                this.particles = [];
+                this.bread = new Bread(15, 15);
+                this.banana = this.spawnFood();
+                this.sugarCube = this.spawnFood();
+                this.powerUp = null;
+                this.mouth = null;
+                this.lastPowerUpSpawn = Date.now();
+                this.updateHUD();
+            }
+
+            restart() {
+                document.getElementById('gameOverScreen').classList.add('hidden');
+                this.start();
+            }
+
+            spawnFood() {
+                let pos;
+                do {
+                    pos = {
+                        x: Math.floor(Math.random() * GRID_SIZE),
+                        y: Math.floor(Math.random() * GRID_SIZE)
+                    };
+                } while (this.isOccupied(pos.x, pos.y));
+                return pos;
+            }
+
+            isOccupied(x, y) {
+                if (this.bread && this.bread.segments.some(seg => seg.x === x && seg.y === y)) return true;
+                if (this.banana && this.banana.x === x && this.banana.y === y) return true;
+                if (this.sugarCube && this.sugarCube.x === x && this.sugarCube.y === y) return true;
+                if (this.powerUp && this.powerUp.x === x && this.powerUp.y === y) return true;
+                if (this.mouth && this.mouth.x === x && this.mouth.y === y) return true;
+                return false;
+            }
+
+            addScore(points) {
+                this.score += points * this.scoreMultiplier;
+                this.updateHUD();
+            }
+
+            updateHUD() {
+                document.getElementById('score').textContent = `Score: ${this.score}`;
+                document.getElementById('length').textContent = `Length: ${this.bread.segments.length}`;
+
+                const powerUpDisplay = document.getElementById('powerUpDisplay');
+                if (this.activePowerUps.length > 0) {
+                    const current = this.activePowerUps[0];
+                    const timeLeft = Math.ceil((current.endTime - Date.now()) / 1000);
+                    powerUpDisplay.innerHTML = `
+                        <span class="powerup-icon">${current.icon}</span>
+                        <span class="powerup-timer">${timeLeft}s</span>
+                    `;
+                } else {
+                    powerUpDisplay.innerHTML = '';
+                }
+            }
+
+            activatePowerUp(type) {
+                const powerUps = {
+                    coffee: { duration: 10000, icon: '☕', speed: 4 },
+                    peanutButter: { duration: 10000, icon: '🥜', speed: 12 },
+                    strawberry: { duration: 15000, icon: '🍓', multiplier: 2 },
+                    cheese: { duration: 8000, icon: '🧀', invincible: true },
+                    pretzel: { duration: 0, icon: '🥨', shrink: true }
+                };
+
+                const powerUp = powerUps[type];
+
+                if (type === 'pretzel') {
+                    if (this.bread.segments.length > 1) {
+                        this.bread.segments.pop();
+                    }
+                    return;
+                }
+
+                const effect = {
+                    type,
+                    endTime: Date.now() + powerUp.duration,
+                    icon: powerUp.icon
+                };
+
+                if (powerUp.speed) this.speed = powerUp.speed;
+                if (powerUp.multiplier) this.scoreMultiplier = powerUp.multiplier;
+                if (powerUp.invincible) this.bread.invincible = true;
+
+                this.activePowerUps.push(effect);
+            }
+
+            updatePowerUps() {
+                const now = Date.now();
+                this.activePowerUps = this.activePowerUps.filter(pu => {
+                    if (now >= pu.endTime) {
+                        this.speed = 8;
+                        this.scoreMultiplier = 1;
+                        this.bread.invincible = false;
+                        return false;
+                    }
+                    return true;
+                });
+
+                // Spawn new power-up if needed
+                if (!this.powerUp && now - this.lastPowerUpSpawn > 5000) {
+                    const types = ['coffee', 'peanutButter', 'strawberry', 'cheese', 'pretzel'];
+                    const type = types[Math.floor(Math.random() * types.length)];
+                    this.powerUp = { ...this.spawnFood(), type };
+                }
+
+                this.updateHUD();
+            }
+
+            createParticles(x, y, color, count = 10) {
+                for (let i = 0; i < count; i++) {
+                    this.particles.push({
+                        x: x * CELL_SIZE + CELL_SIZE / 2,
+                        y: y * CELL_SIZE + CELL_SIZE / 2,
+                        vx: (Math.random() - 0.5) * 4,
+                        vy: (Math.random() - 0.5) * 4,
+                        life: 30,
+                        color
+                    });
+                }
+            }
+
+            updateParticles() {
+                this.particles = this.particles.filter(p => {
+                    p.x += p.vx;
+                    p.y += p.vy;
+                    p.life--;
+                    return p.life > 0;
+                });
+            }
+
+            freeze() {
+                this.frozen = true;
+                this.frozenTime = Date.now() + 1000;
+            }
+
+            checkCollisions() {
+                const head = this.bread.segments[0];
+
+                // Banana
+                if (head.x === this.banana.x && head.y === this.banana.y) {
+                    this.bread.grow();
+                    this.addScore(10);
+                    this.createParticles(head.x, head.y, '#FFD700');
+                    this.banana = this.spawnFood();
+                }
+
+                // Sugar Cube
+                if (this.sugarCube && head.x === this.sugarCube.x && head.y === this.sugarCube.y) {
+                    this.addScore(50);
+                    this.createParticles(head.x, head.y, '#FFFFFF');
+                    this.sugarCube = this.spawnFood();
+                    if (!this.mouth) {
+                        this.mouth = new Mouth(this.spawnFood().x, this.spawnFood().y);
+                    }
+                }
+
+                // Power-up
+                if (this.powerUp && head.x === this.powerUp.x && head.y === this.powerUp.y) {
+                    this.addScore(this.powerUp.type === 'pretzel' ? 15 : 20);
+                    this.createParticles(head.x, head.y, '#FF69B4');
+                    this.activatePowerUp(this.powerUp.type);
+                    this.powerUp = null;
+                    this.lastPowerUpSpawn = Date.now();
+                }
+
+                // Mouth
+                if (this.mouth && !this.bread.invincible) {
+                    if (this.bread.segments.some(seg => seg.x === this.mouth.x && seg.y === this.mouth.y)) {
+                        if (this.bread.segments.length === 1) {
+                            this.gameOver();
+                        } else {
+                            this.bread.segments.pop();
+                            this.createParticles(this.mouth.x, this.mouth.y, '#FF0000');
+                        }
+                    }
+                }
+
+                // Walls
+                if (head.x < 0 || head.x >= GRID_SIZE || head.y < 0 || head.y >= GRID_SIZE) {
+                    if (!this.bread.invincible) {
+                        this.freeze();
+                        this.bread.segments[0] = {
+                            x: Math.max(0, Math.min(GRID_SIZE - 1, head.x)),
+                            y: Math.max(0, Math.min(GRID_SIZE - 1, head.y))
+                        };
+                    }
+                }
+
+                // Self collision
+                for (let i = 1; i < this.bread.segments.length; i++) {
+                    if (head.x === this.bread.segments[i].x && head.y === this.bread.segments[i].y) {
+                        this.gameOver();
+                    }
+                }
+            }
+
+            gameOver() {
+                this.gameRunning = false;
+                document.getElementById('finalScore').innerHTML = `
+                    <p>Final Score: <span class="highlight">${this.score}</span></p>
+                    <p>Final Length: <span class="highlight">${this.bread.segments.length}</span></p>
+                `;
+                document.getElementById('gameOverScreen').classList.remove('hidden');
+            }
+
+            update() {
+                if (this.frozen) {
+                    if (Date.now() >= this.frozenTime) {
+                        this.frozen = false;
+                    } else {
+                        return;
+                    }
+                }
+
+                this.frameCount++;
+                if (this.frameCount % this.speed === 0) {
+                    this.bread.move();
+                    if (this.mouth) {
+                        this.mouth.move(this.bread.segments[0]);
+                    }
+                    this.checkCollisions();
+                }
+
+                this.updatePowerUps();
+                this.updateParticles();
+            }
+
+            draw() {
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+                // Draw grid
+                ctx.strokeStyle = '#f0f0f0';
+                ctx.lineWidth = 0.5;
+                for (let i = 0; i <= GRID_SIZE; i++) {
+                    ctx.beginPath();
+                    ctx.moveTo(i * CELL_SIZE, 0);
+                    ctx.lineTo(i * CELL_SIZE, canvas.height);
+                    ctx.stroke();
+                    ctx.beginPath();
+                    ctx.moveTo(0, i * CELL_SIZE);
+                    ctx.lineTo(canvas.width, i * CELL_SIZE);
+                    ctx.stroke();
+                }
+
+                // Draw food items
+                this.drawFood(this.banana, '🍌');
+                if (this.sugarCube) this.drawFood(this.sugarCube, '🧊');
+                if (this.powerUp) {
+                    const icons = { coffee: '☕', peanutButter: '🥜', strawberry: '🍓', cheese: '🧀', pretzel: '🥨' };
+                    this.drawFood(this.powerUp, icons[this.powerUp.type]);
+                }
+
+                // Draw bread
+                this.bread.draw();
+
+                // Draw mouth
+                if (this.mouth) this.mouth.draw();
+
+                // Draw particles
+                this.particles.forEach(p => {
+                    ctx.fillStyle = p.color;
+                    ctx.globalAlpha = p.life / 30;
+                    ctx.fillRect(p.x, p.y, 4, 4);
+                    ctx.globalAlpha = 1;
+                });
+
+                // Draw freeze effect
+                if (this.frozen) {
+                    ctx.strokeStyle = 'rgba(200, 220, 255, 0.7)';
+                    ctx.lineWidth = 3;
+                    this.bread.segments.forEach(seg => {
+                        ctx.strokeRect(seg.x * CELL_SIZE + 2, seg.y * CELL_SIZE + 2, CELL_SIZE - 4, CELL_SIZE - 4);
+                    });
+                }
+            }
+
+            drawFood(pos, emoji) {
+                ctx.font = `${CELL_SIZE * 0.8}px Arial`;
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                ctx.fillText(emoji, pos.x * CELL_SIZE + CELL_SIZE / 2, pos.y * CELL_SIZE + CELL_SIZE / 2);
+            }
+
+            gameLoop() {
+                if (!this.gameRunning) return;
+
+                this.update();
+                this.draw();
+
+                requestAnimationFrame(() => this.gameLoop());
+            }
+        }
+
+        class Bread {
+            constructor(x, y) {
+                this.segments = [
+                    { x, y },
+                    { x: x - 1, y },
+                    { x: x - 2, y }
+                ];
+                this.direction = { x: 1, y: 0 };
+                this.nextDirection = { x: 1, y: 0 };
+                this.growNext = false;
+                this.invincible = false;
+            }
+
+            move() {
+                this.direction = this.nextDirection;
+                const head = { ...this.segments[0] };
+                head.x += this.direction.x;
+                head.y += this.direction.y;
+
+                this.segments.unshift(head);
+                if (!this.growNext) {
+                    this.segments.pop();
+                } else {
+                    this.growNext = false;
+                }
+            }
+
+            grow() {
+                this.growNext = true;
+            }
+
+            draw() {
+                this.segments.forEach((seg, i) => {
+                    const gradient = ctx.createRadialGradient(
+                        seg.x * CELL_SIZE + CELL_SIZE / 2,
+                        seg.y * CELL_SIZE + CELL_SIZE / 2,
+                        CELL_SIZE / 4,
+                        seg.x * CELL_SIZE + CELL_SIZE / 2,
+                        seg.y * CELL_SIZE + CELL_SIZE / 2,
+                        CELL_SIZE / 2
+                    );
+
+                    if (i === 0) {
+                        gradient.addColorStop(0, '#F4A460');
+                        gradient.addColorStop(1, '#D2691E');
+                    } else {
+                        gradient.addColorStop(0, '#DEB887');
+                        gradient.addColorStop(1, '#CD853F');
+                    }
+
+                    ctx.fillStyle = gradient;
+                    ctx.fillRect(seg.x * CELL_SIZE + 2, seg.y * CELL_SIZE + 2, CELL_SIZE - 4, CELL_SIZE - 4);
+                    ctx.strokeStyle = '#8B4513';
+                    ctx.lineWidth = 1;
+                    ctx.strokeRect(seg.x * CELL_SIZE + 2, seg.y * CELL_SIZE + 2, CELL_SIZE - 4, CELL_SIZE - 4);
+
+                    if (this.invincible) {
+                        ctx.strokeStyle = 'gold';
+                        ctx.lineWidth = 2;
+                        ctx.strokeRect(seg.x * CELL_SIZE, seg.y * CELL_SIZE, CELL_SIZE, CELL_SIZE);
+                    }
+                });
+            }
+        }
+
+        class Mouth {
+            constructor(x, y) {
+                this.x = x;
+                this.y = y;
+                this.chomping = 0;
+            }
+
+            move(target) {
+                // Simple AI: move toward bread with some randomness
+                if (Math.random() < 0.7) {
+                    const dx = target.x - this.x;
+                    const dy = target.y - this.y;
+
+                    if (Math.abs(dx) > Math.abs(dy)) {
+                        this.x += dx > 0 ? 1 : -1;
+                    } else {
+                        this.y += dy > 0 ? 1 : -1;
+                    }
+                } else {
+                    // Random movement
+                    const moves = [{ x: 1, y: 0 }, { x: -1, y: 0 }, { x: 0, y: 1 }, { x: 0, y: -1 }];
+                    const move = moves[Math.floor(Math.random() * moves.length)];
+                    this.x += move.x;
+                    this.y += move.y;
+                }
+
+                this.x = Math.max(0, Math.min(GRID_SIZE - 1, this.x));
+                this.y = Math.max(0, Math.min(GRID_SIZE - 1, this.y));
+                this.chomping = (this.chomping + 1) % 20;
+            }
+
+            draw() {
+                const centerX = this.x * CELL_SIZE + CELL_SIZE / 2;
+                const centerY = this.y * CELL_SIZE + CELL_SIZE / 2;
+                const radius = CELL_SIZE / 2 - 2;
+
+                // Draw mouth circle
+                ctx.fillStyle = '#FF69B4';
+                ctx.beginPath();
+                ctx.arc(centerX, centerY, radius, 0, Math.PI * 2);
+                ctx.fill();
+
+                // Draw chomping animation
+                const openness = Math.abs(this.chomping - 10) / 10;
+                ctx.fillStyle = '#8B0000';
+                ctx.beginPath();
+                ctx.moveTo(centerX, centerY);
+                ctx.arc(centerX, centerY, radius, -openness * 0.3, openness * 0.3);
+                ctx.closePath();
+                ctx.fill();
+
+                // Draw teeth
+                ctx.fillStyle = 'white';
+                for (let i = 0; i < 3; i++) {
+                    const angle = (-openness * 0.3) + (i * openness * 0.2);
+                    const tx = centerX + Math.cos(angle) * radius * 0.8;
+                    const ty = centerY + Math.sin(angle) * radius * 0.8;
+                    ctx.fillRect(tx - 2, ty - 4, 4, 6);
+                }
+            }
+        }
+
+        const game = new Game();
+    </script>
+</body>
+</html>
