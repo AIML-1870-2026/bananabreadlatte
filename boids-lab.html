@@ -1,0 +1,1120 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Boids Simulation Lab</title>
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Roboto+Mono:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+:root {
+  --bg-dark: #0a0e17;
+  --bg-panel: #141821;
+  --bg-control: #1a1f2e;
+  --border: #2a3142;
+  --accent: #00f0ff;
+  --accent-dim: #0088aa;
+  --text: #e0e6f0;
+  --text-dim: #8892a6;
+  --warning: #ff6b35;
+  --success: #00ff88;
+}
+
+body {
+  background: var(--bg-dark);
+  color: var(--text);
+  font-family: 'Roboto Mono', monospace;
+  height: 100vh;
+  overflow: hidden;
+}
+
+/* ─── Layout ─── */
+.container {
+  display: grid;
+  grid-template-columns: 320px 1fr;
+  height: 100vh;
+}
+
+/* ─── Sidebar ─── */
+.sidebar {
+  background: var(--bg-panel);
+  border-right: 1px solid var(--border);
+  overflow-y: auto;
+  padding: 16px;
+}
+.sidebar::-webkit-scrollbar { width: 5px; }
+.sidebar::-webkit-scrollbar-track { background: var(--bg-dark); }
+.sidebar::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+
+.sidebar-header {
+  text-align: center;
+  margin-bottom: 18px;
+  padding-bottom: 14px;
+  border-bottom: 1px solid var(--border);
+}
+.sidebar-header h1 {
+  font-family: 'Orbitron', sans-serif;
+  font-weight: 900;
+  font-size: 19px;
+  text-transform: uppercase;
+  letter-spacing: 4px;
+  color: var(--accent);
+  text-shadow: 0 0 12px rgba(0,240,255,0.5);
+}
+.sidebar-header p {
+  font-size: 9px;
+  color: var(--text-dim);
+  margin-top: 5px;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+}
+
+/* ─── Sections ─── */
+.section {
+  background: var(--bg-control);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 12px 14px;
+  margin-bottom: 10px;
+}
+.section-title {
+  font-family: 'Orbitron', sans-serif;
+  font-weight: 700;
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 2px;
+  color: var(--accent);
+  margin-bottom: 10px;
+  padding-bottom: 6px;
+  border-bottom: 1px solid var(--border);
+}
+
+/* ─── Sliders ─── */
+.sg { margin-bottom: 9px; }
+.sg:last-child { margin-bottom: 0; }
+.sg-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 2px; }
+.sg-label { font-size: 12px; color: var(--text); }
+.sg-val { font-family: 'Orbitron', sans-serif; font-size: 11px; color: var(--accent); font-weight: 700; }
+.sg-tip { font-size: 9px; color: var(--text-dim); margin-bottom: 3px; }
+
+input[type="range"] {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 100%;
+  height: 3px;
+  background: var(--border);
+  border-radius: 2px;
+  outline: none;
+}
+input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 14px; height: 14px;
+  background: var(--accent);
+  border-radius: 50%;
+  cursor: pointer;
+  box-shadow: 0 0 6px rgba(0,240,255,0.5);
+  transition: box-shadow .2s, transform .2s;
+}
+input[type="range"]::-webkit-slider-thumb:hover {
+  box-shadow: 0 0 12px rgba(0,240,255,0.8);
+  transform: scale(1.2);
+}
+input[type="range"]::-moz-range-thumb {
+  width: 14px; height: 14px;
+  background: var(--accent);
+  border: none;
+  border-radius: 50%;
+  cursor: pointer;
+  box-shadow: 0 0 6px rgba(0,240,255,0.5);
+}
+
+/* ─── Presets ─── */
+.preset-row { display: flex; gap: 6px; }
+.preset-btn {
+  flex: 1;
+  background: var(--bg-dark);
+  border: 1px solid var(--border);
+  color: var(--text-dim);
+  font-family: 'Roboto Mono', monospace;
+  font-size: 11px;
+  padding: 8px 2px;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all .3s;
+}
+.preset-btn:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+  box-shadow: 0 0 8px rgba(0,240,255,0.25);
+  transform: translateY(-1px);
+}
+.preset-btn:active { transform: translateY(0); background: rgba(0,240,255,0.08); }
+
+/* ─── Feature Toggles ─── */
+.feat { margin-bottom: 8px; }
+.feat:last-child { margin-bottom: 0; }
+.feat-head { display: flex; align-items: center; gap: 8px; }
+.feat-head input[type="checkbox"] {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 16px; height: 16px;
+  background: var(--bg-dark);
+  border: 1px solid var(--border);
+  border-radius: 3px;
+  cursor: pointer;
+  position: relative;
+  flex-shrink: 0;
+  transition: all .25s;
+}
+.feat-head input[type="checkbox"]:checked {
+  background: var(--accent);
+  border-color: var(--accent);
+  box-shadow: 0 0 6px rgba(0,240,255,0.4);
+}
+.feat-head input[type="checkbox"]:checked::after {
+  content: '';
+  position: absolute;
+  left: 4px; top: 1px;
+  width: 6px; height: 10px;
+  border: solid var(--bg-dark);
+  border-width: 0 2px 2px 0;
+  transform: rotate(45deg);
+}
+.feat-label { font-size: 12px; color: var(--text); }
+.feat-sub { margin-left: 24px; margin-top: 7px; }
+
+/* ─── Boundary Toggle ─── */
+.boundary-row { display: flex; gap: 6px; }
+.boundary-btn {
+  flex: 1;
+  background: var(--bg-dark);
+  border: 1px solid var(--border);
+  color: var(--text-dim);
+  font-family: 'Roboto Mono', monospace;
+  font-size: 12px;
+  padding: 7px;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all .3s;
+  text-align: center;
+}
+.boundary-btn.active {
+  border-color: var(--accent);
+  color: var(--accent);
+  background: rgba(0,240,255,0.1);
+  box-shadow: 0 0 8px rgba(0,240,255,0.2);
+}
+.boundary-btn:hover:not(.active) { border-color: var(--accent-dim); color: var(--text); }
+
+/* ─── Color Pickers ─── */
+.color-row { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; }
+.color-row:last-of-type { margin-bottom: 10px; }
+.color-label { font-size: 12px; color: var(--text); }
+input[type="color"] {
+  width: 34px; height: 26px;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  background: none;
+  cursor: pointer;
+  padding: 2px;
+  transition: border-color .25s;
+}
+input[type="color"]:hover { border-color: var(--accent); }
+
+/* ─── Control Buttons ─── */
+.ctrl-row { display: flex; gap: 8px; }
+.ctrl-btn {
+  flex: 1;
+  padding: 9px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  cursor: pointer;
+  font-family: 'Roboto Mono', monospace;
+  font-size: 12px;
+  font-weight: 500;
+  text-align: center;
+  transition: all .3s;
+}
+.btn-pause { background: rgba(0,240,255,0.1); color: var(--accent); border-color: var(--accent); }
+.btn-pause:hover { background: rgba(0,240,255,0.2); box-shadow: 0 0 10px rgba(0,240,255,0.35); }
+.btn-reset { background: rgba(255,107,53,0.1); color: var(--warning); border-color: var(--warning); }
+.btn-reset:hover { background: rgba(255,107,53,0.2); box-shadow: 0 0 10px rgba(255,107,53,0.35); }
+
+/* ─── Canvas Area ─── */
+.canvas-wrap {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--bg-dark);
+  padding: 20px;
+  overflow: hidden;
+}
+canvas {
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  box-shadow: 0 0 18px rgba(0,240,255,0.15), inset 0 0 40px rgba(0,0,0,0.4);
+  display: block;
+}
+
+/* ─── Stats Overlay ─── */
+.stats-overlay {
+  position: absolute;
+  top: 28px; right: 28px;
+  background: rgba(10,14,23,0.88);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 10px 18px;
+  display: flex;
+  gap: 22px;
+  z-index: 5;
+}
+.stat-item { text-align: center; }
+.stat-label {
+  font-size: 8px;
+  color: var(--text-dim);
+  text-transform: uppercase;
+  letter-spacing: 1.2px;
+  margin-bottom: 2px;
+}
+.stat-value {
+  font-family: 'Orbitron', sans-serif;
+  font-size: 15px;
+  color: var(--accent);
+  font-weight: 700;
+}
+
+/* ─── Legend ─── */
+.legend {
+  position: absolute;
+  bottom: 28px; left: 28px;
+  background: rgba(10,14,23,0.88);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 10px 14px;
+  z-index: 5;
+}
+.legend-item { display: flex; align-items: center; gap: 8px; margin-bottom: 5px; font-size: 11px; color: var(--text-dim); }
+.legend-item:last-child { margin-bottom: 0; }
+.legend-dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
+.legend-dot-ring { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; border: 2px solid #00f0ff; background: transparent; }
+
+/* ─── Paused Overlay ─── */
+.paused-overlay {
+  position: absolute;
+  inset: 0;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  background: rgba(10,14,23,0.6);
+  pointer-events: none;
+  z-index: 10;
+}
+.paused-overlay.active { display: flex; }
+.paused-text {
+  font-family: 'Orbitron', sans-serif;
+  font-size: 38px;
+  font-weight: 900;
+  color: var(--accent);
+  text-transform: uppercase;
+  letter-spacing: 10px;
+  text-shadow: 0 0 24px rgba(0,240,255,0.7);
+  animation: pulse 2s ease-in-out infinite;
+}
+@keyframes pulse { 0%,100% { opacity: 0.45; } 50% { opacity: 1; } }
+
+/* ─── Scrollbar for Firefox ─── */
+.sidebar { scrollbar-width: thin; scrollbar-color: var(--border) var(--bg-dark); }
+</style>
+</head>
+<body>
+<div class="container">
+
+<!-- ═══════════ SIDEBAR ═══════════ -->
+<div class="sidebar">
+  <div class="sidebar-header">
+    <h1>Boids Lab</h1>
+    <p>Emergent Flocking Simulation</p>
+  </div>
+
+  <!-- Core Parameters -->
+  <div class="section">
+    <div class="section-title">Core Parameters</div>
+    <div class="sg">
+      <div class="sg-head"><span class="sg-label">Separation</span><span class="sg-val" id="valSep">1.5</span></div>
+      <div class="sg-tip">Repulsion from nearby boids</div>
+      <input type="range" id="slSep" min="0" max="3" step="0.1" value="1.5">
+    </div>
+    <div class="sg">
+      <div class="sg-head"><span class="sg-label">Alignment</span><span class="sg-val" id="valAlign">1.0</span></div>
+      <div class="sg-tip">Match heading of neighbors</div>
+      <input type="range" id="slAlign" min="0" max="3" step="0.1" value="1.0">
+    </div>
+    <div class="sg">
+      <div class="sg-head"><span class="sg-label">Cohesion</span><span class="sg-val" id="valCoh">1.0</span></div>
+      <div class="sg-tip">Pull toward group center</div>
+      <input type="range" id="slCoh" min="0" max="3" step="0.1" value="1.0">
+    </div>
+    <div class="sg">
+      <div class="sg-head"><span class="sg-label">Neighbor Radius</span><span class="sg-val" id="valRad">50</span></div>
+      <div class="sg-tip">Perception range in pixels</div>
+      <input type="range" id="slRad" min="10" max="150" step="5" value="50">
+    </div>
+    <div class="sg">
+      <div class="sg-head"><span class="sg-label">Max Speed</span><span class="sg-val" id="valSpd">4.0</span></div>
+      <div class="sg-tip">Velocity magnitude ceiling</div>
+      <input type="range" id="slSpd" min="1" max="8" step="0.5" value="4">
+    </div>
+    <div class="sg">
+      <div class="sg-head"><span class="sg-label">Max Force</span><span class="sg-val" id="valFrc">0.10</span></div>
+      <div class="sg-tip">Maximum steering acceleration</div>
+      <input type="range" id="slFrc" min="0.01" max="0.5" step="0.01" value="0.1">
+    </div>
+  </div>
+
+  <!-- Presets -->
+  <div class="section">
+    <div class="section-title">Behavior Presets</div>
+    <div class="preset-row">
+      <button class="preset-btn" id="btnSchool">Schooling</button>
+      <button class="preset-btn" id="btnChaotic">Chaotic</button>
+      <button class="preset-btn" id="btnCluster">Cluster</button>
+    </div>
+  </div>
+
+  <!-- Advanced Features -->
+  <div class="section">
+    <div class="section-title">Advanced Features</div>
+
+    <div class="feat">
+      <label class="feat-head"><input type="checkbox" id="cbCone"><span class="feat-label">Perception Cone</span></label>
+      <div class="feat-sub" id="subCone" style="display:none">
+        <div class="sg">
+          <div class="sg-head"><span class="sg-label">FOV Angle</span><span class="sg-val" id="valFov">180</span></div>
+          <input type="range" id="slFov" min="60" max="360" step="10" value="180">
+        </div>
+      </div>
+    </div>
+
+    <div class="feat">
+      <label class="feat-head"><input type="checkbox" id="cbObs"><span class="feat-label">Obstacle Avoidance</span></label>
+      <div class="feat-sub" id="subObs" style="display:none">
+        <div class="sg">
+          <div class="sg-head"><span class="sg-label">Avoidance Weight</span><span class="sg-val" id="valObs">2.0</span></div>
+          <input type="range" id="slObs" min="0" max="5" step="0.1" value="2.0">
+        </div>
+      </div>
+    </div>
+
+    <div class="feat">
+      <label class="feat-head"><input type="checkbox" id="cbLead"><span class="feat-label">Leader Following</span></label>
+      <div class="feat-sub" id="subLead" style="display:none">
+        <div class="sg">
+          <div class="sg-head"><span class="sg-label">Follow Weight</span><span class="sg-val" id="valLead">1.5</span></div>
+          <input type="range" id="slLead" min="0" max="3" step="0.1" value="1.5">
+        </div>
+      </div>
+    </div>
+
+    <div class="feat">
+      <label class="feat-head"><input type="checkbox" id="cbPred"><span class="feat-label">Predator Evasion</span></label>
+      <div class="feat-sub" id="subPred" style="display:none">
+        <div class="sg">
+          <div class="sg-head"><span class="sg-label">Evasion Weight</span><span class="sg-val" id="valPred">2.5</span></div>
+          <input type="range" id="slPred" min="0" max="5" step="0.1" value="2.5">
+        </div>
+      </div>
+    </div>
+
+    <div class="feat">
+      <label class="feat-head"><input type="checkbox" id="cbMouse"><span class="feat-label">Mouse Following</span></label>
+      <div class="feat-sub" id="subMouse" style="display:none">
+        <div class="sg">
+          <div class="sg-head"><span class="sg-label">Attraction Weight</span><span class="sg-val" id="valMouse">1.5</span></div>
+          <input type="range" id="slMouse" min="0" max="5" step="0.1" value="1.5">
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Environment -->
+  <div class="section">
+    <div class="section-title">Environment</div>
+    <div style="margin-bottom:10px">
+      <div class="sg-label" style="margin-bottom:6px">Boundary Mode</div>
+      <div class="boundary-row">
+        <button class="boundary-btn active" id="btnWrap">Wrap</button>
+        <button class="boundary-btn" id="btnBounce">Bounce</button>
+      </div>
+    </div>
+    <div class="sg">
+      <div class="sg-head"><span class="sg-label">Boid Count</span><span class="sg-val" id="valCount">100</span></div>
+      <div class="sg-tip">Changes trigger simulation reset</div>
+      <input type="range" id="slCount" min="10" max="300" step="10" value="100">
+    </div>
+  </div>
+
+  <!-- Appearance -->
+  <div class="section">
+    <div class="section-title">Appearance</div>
+    <div class="color-row"><span class="color-label">Boid Color</span><input type="color" id="cpBoid" value="#00f0ff"></div>
+    <div class="color-row"><span class="color-label">Leader Color</span><input type="color" id="cpLead" value="#00ff88"></div>
+    <div class="color-row"><span class="color-label">Predator Color</span><input type="color" id="cpPred" value="#ff6b35"></div>
+    <div class="sg">
+      <div class="sg-head"><span class="sg-label">Trail Effect</span><span class="sg-val" id="valTrail">30</span></div>
+      <div class="sg-tip">Motion trail intensity</div>
+      <input type="range" id="slTrail" min="0" max="100" step="5" value="30">
+    </div>
+  </div>
+
+  <!-- Controls -->
+  <div class="section">
+    <div class="section-title">Controls</div>
+    <div class="ctrl-row">
+      <button class="ctrl-btn btn-pause" id="btnPause">⏸ Pause</button>
+      <button class="ctrl-btn btn-reset" id="btnReset">↺ Reset</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════ CANVAS AREA ═══════════ -->
+<div class="canvas-wrap">
+  <canvas id="canvas"></canvas>
+
+  <div class="stats-overlay">
+    <div class="stat-item"><div class="stat-label">FPS</div><div class="stat-value" id="sFps">0</div></div>
+    <div class="stat-item"><div class="stat-label">Boids</div><div class="stat-value" id="sBoids">100</div></div>
+    <div class="stat-item"><div class="stat-label">Avg Speed</div><div class="stat-value" id="sSpeed">0.00</div></div>
+    <div class="stat-item"><div class="stat-label">Avg Nbrs</div><div class="stat-value" id="sNbrs">0</div></div>
+  </div>
+
+  <div class="legend">
+    <div class="legend-item"><div class="legend-dot" id="lgBoid" style="background:#00f0ff;box-shadow:0 0 5px #00f0ff"></div><span>Boid</span></div>
+    <div class="legend-item"><div class="legend-dot" id="lgLead" style="background:#00ff88;box-shadow:0 0 5px #00ff88"></div><span>Leader</span></div>
+    <div class="legend-item"><div class="legend-dot" id="lgPred" style="background:#ff6b35;box-shadow:0 0 5px #ff6b35"></div><span>Predator</span></div>
+    <div class="legend-item"><div class="legend-dot" style="background:rgba(136,146,166,0.5)"></div><span>Obstacle</span></div>
+    <div class="legend-item"><div class="legend-dot-ring" id="lgMouse"></div><span>Mouse Target</span></div>
+  </div>
+
+  <div class="paused-overlay" id="pausedOverlay"><div class="paused-text">PAUSED</div></div>
+</div>
+
+</div><!-- /container -->
+
+<script>
+// ═══════════════════════════════════════════════════════
+// CANVAS SETUP
+// ═══════════════════════════════════════════════════════
+const canvas = document.getElementById('canvas');
+const ctx    = canvas.getContext('2d');
+const wrap   = document.querySelector('.canvas-wrap');
+
+function resizeCanvas() {
+  const r = wrap.getBoundingClientRect();
+  canvas.width  = r.width  - 40;
+  canvas.height = r.height - 40;
+}
+resizeCanvas();
+window.addEventListener('resize', () => { resizeCanvas(); initObstacles(); });
+
+// ═══════════════════════════════════════════════════════
+// STATE
+// ═══════════════════════════════════════════════════════
+let boids = [], obstacles = [], predator = null, leader = null;
+let paused = false;
+let mouse  = { x: 0, y: 0, inCanvas: false };
+let boundaryMode = 'wrap';
+
+const P = {                          // live params
+  sep: 1.5, align: 1.0, coh: 1.0,
+  radius: 50, maxSpd: 4, maxFrc: 0.1,
+  fov: 180,
+  obsW: 2.0, leadW: 1.5, predW: 2.5, mouseW: 1.5,
+  count: 100, trail: 30
+};
+
+const F = {                          // feature flags
+  cone: false, obs: false, lead: false, pred: false, mouse: false
+};
+
+const C = { boid: '#00f0ff', lead: '#00ff88', pred: '#ff6b35' };
+
+// FPS
+let fps = 0, frameCount = 0, lastFpsTime = performance.now();
+// neighbor accumulator (reset each frame)
+let totalNbrs = 0;
+
+// ═══════════════════════════════════════════════════════
+// BOID
+// ═══════════════════════════════════════════════════════
+class Boid {
+  constructor() {
+    this.x  = Math.random() * canvas.width;
+    this.y  = Math.random() * canvas.height;
+    this.vx = (Math.random() - 0.5) * 2;
+    this.vy = (Math.random() - 0.5) * 2;
+    this.ax = 0; this.ay = 0;
+    this.isLeader = false;
+  }
+
+  /* ── neighbor search with optional perception-cone filter ── */
+  getNeighbors() {
+    const r2       = P.radius * P.radius;
+    const useCone  = F.cone && !this.isLeader;
+    const halfFov  = useCone ? (P.fov * 0.5 * Math.PI / 180) : 0;
+    const heading  = Math.atan2(this.vy, this.vx);
+    const out      = [];
+
+    for (let i = 0; i < boids.length; i++) {
+      const o = boids[i];
+      if (o === this) continue;
+      const dx = o.x - this.x, dy = o.y - this.y;
+      const d2 = dx * dx + dy * dy;
+      if (d2 >= r2) continue;                   // squared-distance early-out
+
+      if (useCone) {
+        let a = Math.atan2(dy, dx) - heading;
+        if (a >  Math.PI) a -= 2 * Math.PI;
+        if (a < -Math.PI) a += 2 * Math.PI;
+        if (Math.abs(a) > halfFov) continue;
+      }
+      out.push({ boid: o, dist: Math.sqrt(d2) });
+    }
+    return out;
+  }
+
+  /* ── steering helper: limit magnitude ── */
+  static limitForce(fx, fy, maxF) {
+    const m = Math.sqrt(fx * fx + fy * fy);
+    return m > maxF ? { x: fx / m * maxF, y: fy / m * maxF } : { x: fx, y: fy };
+  }
+
+  /* ── separation: repel from close neighbors ── */
+  separate(nbrs) {
+    let fx = 0, fy = 0, n = 0;
+    for (const { boid: o, dist: d } of nbrs) {
+      if (d === 0) continue;
+      fx += (this.x - o.x) / (d * d);
+      fy += (this.y - o.y) / (d * d);
+      n++;
+    }
+    if (n === 0) return { x: 0, y: 0 };
+    fx /= n; fy /= n;
+    // normalize → desired velocity at maxSpeed
+    const m = Math.sqrt(fx * fx + fy * fy);
+    if (m > 0) { fx = fx / m * P.maxSpd; fy = fy / m * P.maxSpd; }
+    // steering = desired − current
+    fx -= this.vx; fy -= this.vy;
+    const c = Boid.limitForce(fx, fy, P.maxFrc);
+    return { x: c.x * P.sep, y: c.y * P.sep };
+  }
+
+  /* ── alignment: match neighbor heading ── */
+  align(nbrs) {
+    if (nbrs.length === 0) return { x: 0, y: 0 };
+    let fx = 0, fy = 0;
+    for (const { boid: o } of nbrs) { fx += o.vx; fy += o.vy; }
+    fx /= nbrs.length; fy /= nbrs.length;
+    const m = Math.sqrt(fx * fx + fy * fy);
+    if (m > 0) { fx = fx / m * P.maxSpd; fy = fy / m * P.maxSpd; }
+    fx -= this.vx; fy -= this.vy;
+    const c = Boid.limitForce(fx, fy, P.maxFrc);
+    return { x: c.x * P.align, y: c.y * P.align };
+  }
+
+  /* ── cohesion: steer toward center of mass ── */
+  cohere(nbrs) {
+    if (nbrs.length === 0) return { x: 0, y: 0 };
+    let cx = 0, cy = 0;
+    for (const { boid: o } of nbrs) { cx += o.x; cy += o.y; }
+    cx /= nbrs.length; cy /= nbrs.length;
+    return this.seek(cx, cy, P.coh);
+  }
+
+  /* ── generic seek: steer toward a point ── */
+  seek(tx, ty, w) {
+    let dx = tx - this.x, dy = ty - this.y;
+    const m = Math.sqrt(dx * dx + dy * dy);
+    if (m > 0) { dx = dx / m * P.maxSpd; dy = dy / m * P.maxSpd; }
+    dx -= this.vx; dy -= this.vy;
+    const c = Boid.limitForce(dx, dy, P.maxFrc);
+    return { x: c.x * w, y: c.y * w };
+  }
+
+  /* ── flee: steer away from a point within range ── */
+  flee(tx, ty, w, range) {
+    const dx = this.x - tx, dy = this.y - ty;
+    const d  = Math.sqrt(dx * dx + dy * dy);
+    if (d > range || d === 0) return { x: 0, y: 0 };
+    const scale = (range - d) / range;
+    let fx = dx / d * P.maxSpd, fy = dy / d * P.maxSpd;
+    fx -= this.vx; fy -= this.vy;
+    const c = Boid.limitForce(fx, fy, P.maxFrc);
+    return { x: c.x * w * scale, y: c.y * w * scale };
+  }
+
+  /* ── obstacle avoidance ── */
+  avoidObs() {
+    let fx = 0, fy = 0, hit = false;
+    for (const o of obstacles) {
+      const dx = this.x - o.x, dy = this.y - o.y;
+      const d  = Math.sqrt(dx * dx + dy * dy);
+      const dr = o.r + 30;
+      if (d < dr && d > 0) {
+        fx += dx / d * ((dr - d) / dr);
+        fy += dy / d * ((dr - d) / dr);
+        hit = true;
+      }
+    }
+    if (!hit) return { x: 0, y: 0 };
+    const m = Math.sqrt(fx * fx + fy * fy);
+    if (m > 0) { fx = fx / m * P.maxSpd; fy = fy / m * P.maxSpd; }
+    fx -= this.vx; fy -= this.vy;
+    const c = Boid.limitForce(fx, fy, P.maxFrc);
+    return { x: c.x * P.obsW, y: c.y * P.obsW };
+  }
+
+  /* ── accumulate all steering forces ── */
+  flock() {
+    const nbrs = this.getNeighbors();
+    totalNbrs += nbrs.length;
+
+    const s = this.separate(nbrs);
+    const a = this.align(nbrs);
+    const c = this.cohere(nbrs);
+    this.ax += s.x + a.x + c.x;
+    this.ay += s.y + a.y + c.y;
+
+    if (F.lead && leader && !this.isLeader) {
+      const lf = this.seek(leader.x, leader.y, P.leadW);
+      this.ax += lf.x; this.ay += lf.y;
+    }
+    if (F.pred && predator) {
+      const pf = this.flee(predator.x, predator.y, P.predW, 150);
+      this.ax += pf.x; this.ay += pf.y;
+    }
+    if (F.mouse && mouse.inCanvas) {
+      const mf = this.seek(mouse.x, mouse.y, P.mouseW);
+      this.ax += mf.x; this.ay += mf.y;
+    }
+    if (F.obs) {
+      const of2 = this.avoidObs();
+      this.ax += of2.x; this.ay += of2.y;
+    }
+  }
+
+  /* ── apply bounce forces (before velocity integration) ── */
+  bounceForce() {
+    if (boundaryMode !== 'bounce') return;
+    const M = 50, f = 0.01;
+    if (this.x < M)                       this.ax += (M - this.x) * f;
+    else if (this.x > canvas.width - M)   this.ax -= (this.x - (canvas.width - M)) * f;
+    if (this.y < M)                       this.ay += (M - this.y) * f;
+    else if (this.y > canvas.height - M)  this.ay -= (this.y - (canvas.height - M)) * f;
+  }
+
+  /* ── integrate velocity & position ── */
+  update() {
+    this.bounceForce();
+    this.vx += this.ax; this.vy += this.ay;
+
+    // clamp speed
+    const spd = Math.sqrt(this.vx * this.vx + this.vy * this.vy);
+    if (spd > P.maxSpd) { this.vx = this.vx / spd * P.maxSpd; this.vy = this.vy / spd * P.maxSpd; }
+
+    this.x += this.vx; this.y += this.vy;
+
+    // wrap
+    if (boundaryMode === 'wrap') {
+      if (this.x <  0)            this.x = canvas.width;
+      if (this.x >  canvas.width) this.x = 0;
+      if (this.y <  0)            this.y = canvas.height;
+      if (this.y >  canvas.height) this.y = 0;
+    }
+
+    this.ax = 0; this.ay = 0;
+  }
+
+  /* ── render triangle + optional perception cone ── */
+  draw() {
+    const angle = Math.atan2(this.vy, this.vx);
+    const size  = this.isLeader ? 8 : 6;
+    const color = this.isLeader ? C.lead : C.boid;
+
+    ctx.save();
+    ctx.translate(this.x, this.y);
+    ctx.rotate(angle);
+
+    // perception cone arc
+    if (F.cone && !this.isLeader) {
+      const halfRad = P.fov * 0.5 * Math.PI / 180;
+      ctx.beginPath();
+      if (P.fov >= 360) {
+        ctx.arc(0, 0, P.radius, 0, Math.PI * 2);
+      } else {
+        ctx.moveTo(0, 0);
+        ctx.arc(0, 0, P.radius, -halfRad, halfRad);
+        ctx.closePath();
+      }
+      ctx.fillStyle   = color + '0d';
+      ctx.strokeStyle = color + '33';
+      ctx.lineWidth   = 1;
+      ctx.fill();
+      ctx.stroke();
+    }
+
+    // triangle body
+    ctx.beginPath();
+    ctx.moveTo( size,            0);
+    ctx.lineTo(-size * 0.7, -size * 0.5);
+    ctx.lineTo(-size * 0.7,  size * 0.5);
+    ctx.closePath();
+    ctx.fillStyle   = color;
+    ctx.shadowColor = color;
+    ctx.shadowBlur  = this.isLeader ? 15 : 10;
+    ctx.fill();
+    ctx.shadowBlur  = 0;
+
+    ctx.restore();
+  }
+}
+
+// ═══════════════════════════════════════════════════════
+// PREDATOR
+// ═══════════════════════════════════════════════════════
+class Predator {
+  constructor() {
+    this.x = Math.random() * canvas.width;
+    this.y = Math.random() * canvas.height;
+    this.vx = 0; this.vy = 0;
+    this.ax = 0; this.ay = 0;
+  }
+
+  update() {
+    const mSpd = P.maxSpd * 0.8;
+    const mFrc = P.maxFrc * 1.2;
+
+    // find nearest boid
+    let nearest = null, minD2 = Infinity;
+    for (const b of boids) {
+      const dx = b.x - this.x, dy = b.y - this.y;
+      const d2 = dx * dx + dy * dy;
+      if (d2 < minD2) { minD2 = d2; nearest = b; }
+    }
+
+    if (nearest) {
+      let dx = nearest.x - this.x, dy = nearest.y - this.y;
+      const m = Math.sqrt(dx * dx + dy * dy);
+      if (m > 0) { dx = dx / m * mSpd; dy = dy / m * mSpd; }
+      let fx = dx - this.vx, fy = dy - this.vy;
+      const fm = Math.sqrt(fx * fx + fy * fy);
+      if (fm > mFrc) { fx = fx / fm * mFrc; fy = fy / fm * mFrc; }
+      this.ax += fx; this.ay += fy;
+    }
+
+    this.vx += this.ax; this.vy += this.ay;
+    const spd = Math.sqrt(this.vx * this.vx + this.vy * this.vy);
+    if (spd > mSpd) { this.vx = this.vx / spd * mSpd; this.vy = this.vy / spd * mSpd; }
+
+    this.x += this.vx; this.y += this.vy;
+
+    // boundary (same as boid)
+    if (boundaryMode === 'wrap') {
+      if (this.x <  0)            this.x = canvas.width;
+      if (this.x >  canvas.width) this.x = 0;
+      if (this.y <  0)            this.y = canvas.height;
+      if (this.y >  canvas.height) this.y = 0;
+    } else {
+      const M = 50, f = 0.01;
+      if (this.x < M)                       this.ax += (M - this.x) * f;
+      else if (this.x > canvas.width - M)   this.ax -= (this.x - (canvas.width - M)) * f;
+      if (this.y < M)                       this.ay += (M - this.y) * f;
+      else if (this.y > canvas.height - M)  this.ay -= (this.y - (canvas.height - M)) * f;
+      this.x = Math.max(0, Math.min(canvas.width, this.x));
+      this.y = Math.max(0, Math.min(canvas.height, this.y));
+    }
+
+    this.ax = 0; this.ay = 0;
+  }
+
+  draw() {
+    const angle = Math.atan2(this.vy, this.vx);
+    ctx.save();
+    ctx.translate(this.x, this.y);
+    ctx.rotate(angle);
+
+    ctx.beginPath();
+    ctx.moveTo( 10,  0);
+    ctx.lineTo(-10,  7);
+    ctx.lineTo( -6,  0);
+    ctx.lineTo(-10, -7);
+    ctx.closePath();
+
+    ctx.fillStyle   = C.pred;
+    ctx.shadowColor = C.pred;
+    ctx.shadowBlur  = 20;
+    ctx.fill();
+    ctx.shadowBlur  = 0;
+    ctx.restore();
+  }
+}
+
+// ═══════════════════════════════════════════════════════
+// INIT
+// ═══════════════════════════════════════════════════════
+function initBoids() {
+  boids = [];
+  for (let i = 0; i < P.count; i++) boids.push(new Boid());
+}
+
+function initObstacles() {
+  obstacles = [
+    { x: canvas.width * 0.3, y: canvas.height * 0.5, r: 40 },
+    { x: canvas.width * 0.5, y: canvas.height * 0.3, r: 35 },
+    { x: canvas.width * 0.7, y: canvas.height * 0.7, r: 45 }
+  ];
+}
+
+function initLeader() {
+  if (F.lead && boids.length > 0) {
+    leader = boids[0];
+    leader.isLeader = true;
+  }
+}
+
+function initPredator() {
+  predator = F.pred ? new Predator() : null;
+}
+
+function resetSimulation() {
+  initBoids();
+  initObstacles();
+  leader   = null;
+  predator = null;
+  // clear any previous leader flag
+  initLeader();
+  initPredator();
+}
+
+// ═══════════════════════════════════════════════════════
+// UI WIRING
+// ═══════════════════════════════════════════════════════
+(function setupSliders() {
+  const map = [
+    ['slSep',   'valSep',   'sep',    v => v.toFixed(1)],
+    ['slAlign', 'valAlign', 'align',  v => v.toFixed(1)],
+    ['slCoh',   'valCoh',   'coh',    v => v.toFixed(1)],
+    ['slRad',   'valRad',   'radius', v => Math.round(v)+''],
+    ['slSpd',   'valSpd',   'maxSpd', v => v.toFixed(1)],
+    ['slFrc',   'valFrc',   'maxFrc', v => v.toFixed(2)],
+    ['slFov',   'valFov',   'fov',    v => Math.round(v)+''],
+    ['slObs',   'valObs',   'obsW',   v => v.toFixed(1)],
+    ['slLead',  'valLead',  'leadW',  v => v.toFixed(1)],
+    ['slPred',  'valPred',  'predW',  v => v.toFixed(1)],
+    ['slMouse', 'valMouse', 'mouseW', v => v.toFixed(1)],
+    ['slTrail', 'valTrail', 'trail',  v => Math.round(v)+'']
+  ];
+  for (const [sid, vid, key, fmt] of map) {
+    const sl = document.getElementById(sid);
+    const vl = document.getElementById(vid);
+    sl.addEventListener('input', () => { P[key] = parseFloat(sl.value); vl.textContent = fmt(P[key]); });
+  }
+
+  // boid count triggers reset
+  const slC = document.getElementById('slCount'), vlC = document.getElementById('valCount');
+  slC.addEventListener('input', () => { P.count = +slC.value; vlC.textContent = P.count; resetSimulation(); });
+})();
+
+(function setupCheckboxes() {
+  const map = [
+    ['cbCone',  'subCone',  'cone',  null],
+    ['cbObs',   'subObs',   'obs',   null],
+    ['cbLead',  'subLead',  'lead',  () => { if (F.lead) initLeader(); else { if (leader) leader.isLeader = false; leader = null; } }],
+    ['cbPred',  'subPred',  'pred',  () => { initPredator(); }],
+    ['cbMouse', 'subMouse', 'mouse', null]
+  ];
+  for (const [cid, sid, key, cb] of map) {
+    const chk = document.getElementById(cid);
+    const sub = document.getElementById(sid);
+    chk.addEventListener('change', () => {
+      F[key] = chk.checked;
+      sub.style.display = chk.checked ? 'block' : 'none';
+      if (cb) cb();
+    });
+  }
+})();
+
+(function setupPresets() {
+  const presets = {
+    school:  { sep:1.0, align:2.5, coh:2.0, radius:60, maxSpd:4, maxFrc:0.1 },
+    chaotic: { sep:2.5, align:0.5, coh:0.3, radius:30, maxSpd:6, maxFrc:0.2 },
+    cluster: { sep:0.8, align:1.2, coh:3.0, radius:80, maxSpd:3, maxFrc:0.08 }
+  };
+  // slider-id → [param-key, format-fn]
+  const sliderMap = [
+    ['slSep',   'valSep',   'sep',    v => v.toFixed(1)],
+    ['slAlign', 'valAlign', 'align',  v => v.toFixed(1)],
+    ['slCoh',   'valCoh',   'coh',    v => v.toFixed(1)],
+    ['slRad',   'valRad',   'radius', v => Math.round(v)+''],
+    ['slSpd',   'valSpd',   'maxSpd', v => v.toFixed(1)],
+    ['slFrc',   'valFrc',   'maxFrc', v => v.toFixed(2)]
+  ];
+
+  function apply(name) {
+    const p = presets[name];
+    Object.assign(P, p);
+    for (const [sid, vid, key, fmt] of sliderMap) {
+      document.getElementById(sid).value = P[key];
+      document.getElementById(vid).textContent = fmt(P[key]);
+    }
+  }
+
+  document.getElementById('btnSchool').addEventListener('click',  () => apply('school'));
+  document.getElementById('btnChaotic').addEventListener('click', () => apply('chaotic'));
+  document.getElementById('btnCluster').addEventListener('click', () => apply('cluster'));
+})();
+
+(function setupBoundary() {
+  const btnW = document.getElementById('btnWrap'), btnB = document.getElementById('btnBounce');
+  function set(mode) {
+    boundaryMode = mode;
+    btnW.classList.toggle('active', mode === 'wrap');
+    btnB.classList.toggle('active', mode === 'bounce');
+  }
+  btnW.addEventListener('click',  () => set('wrap'));
+  btnB.addEventListener('click',  () => set('bounce'));
+})();
+
+(function setupColors() {
+  function wire(cpId, key, legendIds) {
+    document.getElementById(cpId).addEventListener('input', function () {
+      C[key] = this.value;
+      for (const lid of legendIds) {
+        const el = document.getElementById(lid);
+        if (el.classList.contains('legend-dot')) {
+          el.style.background  = this.value;
+          el.style.boxShadow   = '0 0 5px ' + this.value;
+        }
+      }
+    });
+  }
+  wire('cpBoid', 'boid', ['lgBoid']);
+  wire('cpLead', 'lead', ['lgLead']);
+  wire('cpPred', 'pred', ['lgPred']);
+
+  // mouse-target ring follows boid color
+  document.getElementById('cpBoid').addEventListener('input', function () {
+    document.getElementById('lgMouse').style.borderColor = this.value;
+  });
+})();
+
+document.getElementById('btnPause').addEventListener('click', function () {
+  paused = !paused;
+  this.textContent = paused ? '▶ Resume' : '⏸ Pause';
+  document.getElementById('pausedOverlay').classList.toggle('active', paused);
+});
+document.getElementById('btnReset').addEventListener('click', resetSimulation);
+
+// ═══════════════════════════════════════════════════════
+// MOUSE TRACKING
+// ═══════════════════════════════════════════════════════
+canvas.addEventListener('mousemove', e => {
+  const r = canvas.getBoundingClientRect();
+  mouse.x = e.clientX - r.left;
+  mouse.y = e.clientY - r.top;
+});
+canvas.addEventListener('mouseenter', () => { mouse.inCanvas = true;  });
+canvas.addEventListener('mouseleave', () => { mouse.inCanvas = false; });
+
+// ═══════════════════════════════════════════════════════
+// DRAW HELPERS
+// ═══════════════════════════════════════════════════════
+function drawObstacles() {
+  for (const o of obstacles) {
+    ctx.beginPath();
+    ctx.arc(o.x, o.y, o.r, 0, Math.PI * 2);
+    ctx.fillStyle   = 'rgba(136,146,166,0.3)';
+    ctx.strokeStyle = '#8892a6';
+    ctx.lineWidth   = 2;
+    ctx.fill();
+    ctx.stroke();
+  }
+}
+
+function drawMouseIndicator() {
+  if (!F.mouse || !mouse.inCanvas) return;
+  ctx.save();
+  ctx.strokeStyle = C.boid;
+  ctx.lineWidth   = 1.5;
+  for (let i = 3; i >= 1; i--) {
+    ctx.globalAlpha = 0.15 * i;
+    ctx.beginPath();
+    ctx.arc(mouse.x, mouse.y, i * 9, 0, Math.PI * 2);
+    ctx.stroke();
+  }
+  ctx.globalAlpha = 1;
+  ctx.restore();
+}
+
+function updateStats() {
+  let totalSpd = 0;
+  for (const b of boids) totalSpd += Math.sqrt(b.vx * b.vx + b.vy * b.vy);
+  const n = boids.length || 1;
+  document.getElementById('sBoids').textContent  = boids.length;
+  document.getElementById('sSpeed').textContent  = (totalSpd / n).toFixed(2);
+  document.getElementById('sNbrs').textContent   = Math.round(totalNbrs / n);
+}
+
+// ═══════════════════════════════════════════════════════
+// ANIMATION LOOP
+// ═══════════════════════════════════════════════════════
+function animate() {
+  requestAnimationFrame(animate);
+
+  // ── FPS counter (1-second sampling) ──
+  frameCount++;
+  const now = performance.now();
+  if (now - lastFpsTime >= 1000) {
+    fps = frameCount;
+    frameCount = 0;
+    lastFpsTime = now;
+    document.getElementById('sFps').textContent = fps;
+  }
+
+  if (paused) return;
+
+  // 1. partial clear (trail effect)
+  const trailAlpha = 1 - P.trail / 100;
+  ctx.fillStyle = `rgba(10,14,23,${trailAlpha})`;
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+  // 2. obstacles
+  if (F.obs) drawObstacles();
+
+  // 3a. calculate forces (phase 1 – all boids read current positions)
+  totalNbrs = 0;
+  for (const b of boids) b.flock();
+
+  // 3b. integrate & draw (phase 2)
+  for (const b of boids) b.update();
+  for (const b of boids) b.draw();
+
+  // 4. predator
+  if (F.pred && predator) { predator.update(); predator.draw(); }
+
+  // 5. mouse indicator
+  drawMouseIndicator();
+
+  // 6. stats
+  updateStats();
+}
+
+// ═══════════════════════════════════════════════════════
+// BOOT
+// ═══════════════════════════════════════════════════════
+resetSimulation();
+animate();
+</script>
+</body>
+</html>
