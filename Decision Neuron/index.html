@@ -1,0 +1,941 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Should I Break No Contact?</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      font-family: 'Century Schoolbook', 'Century', 'Georgia', serif;
+      background: #fce4ec;
+      color: #5d4037;
+      min-height: 100vh;
+      overflow-x: hidden;
+    }
+
+    .container {
+      max-width: 900px;
+      margin: 0 auto;
+      padding: 2rem 1.5rem 4rem;
+    }
+
+    header {
+      text-align: center;
+      padding: 2rem 0 0.5rem;
+    }
+
+    header h1 {
+      font-size: clamp(1.8rem, 5vw, 3rem);
+      font-weight: 700;
+      color: #d81b60;
+      line-height: 1.2;
+    }
+
+    header p {
+      margin-top: 0.5rem;
+      color: #b07090;
+      font-size: 0.95rem;
+      font-style: italic;
+    }
+
+    /* Stick figures */
+    .stickmen-row {
+      display: flex;
+      justify-content: center;
+      gap: 1rem;
+      margin: 1rem 0 0.5rem;
+    }
+
+    .stickman-canvas {
+      width: 80px;
+      height: 100px;
+    }
+
+    /* Output Display */
+    .output-section {
+      text-align: center;
+      padding: 2rem 1rem;
+      margin: 1rem 0;
+      border-radius: 20px;
+      background: #fff0f3;
+      border: 2px dashed #f8bbd0;
+      transition: border-color 0.4s, box-shadow 0.4s;
+    }
+
+    .output-value {
+      font-size: clamp(3rem, 10vw, 5rem);
+      font-weight: 700;
+      transition: color 0.3s;
+    }
+
+    .output-label {
+      font-size: clamp(1.2rem, 3vw, 1.6rem);
+      font-weight: 600;
+      margin-top: 0.25rem;
+      transition: color 0.3s;
+    }
+
+    .output-sublabel {
+      font-size: 0.85rem;
+      color: #c48b9f;
+      margin-top: 0.5rem;
+    }
+
+    /* Sliders */
+    .sliders-section {
+      display: flex;
+      flex-direction: column;
+      gap: 1rem;
+      margin: 1.5rem 0;
+    }
+
+    .slider-group {
+      background: #fff5f7;
+      border: 1.5px solid #f8bbd0;
+      border-radius: 14px;
+      padding: 0.9rem 1.25rem;
+      transition: border-color 0.2s, box-shadow 0.2s;
+    }
+
+    .slider-group:hover {
+      border-color: #f48fb1;
+      box-shadow: 0 2px 12px rgba(244, 143, 177, 0.15);
+    }
+
+    .slider-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 0.5rem;
+    }
+
+    .slider-label {
+      font-weight: 600;
+      font-size: 0.95rem;
+      color: #6d4c5e;
+    }
+
+    .slider-value {
+      font-size: 0.85rem;
+      color: #d81b60;
+      font-weight: 600;
+      min-width: 40px;
+      text-align: right;
+    }
+
+    .slider-range-labels {
+      display: flex;
+      justify-content: space-between;
+      font-size: 0.72rem;
+      color: #c48b9f;
+      margin-top: 0.35rem;
+      font-style: italic;
+    }
+
+    input[type="range"] {
+      -webkit-appearance: none;
+      appearance: none;
+      width: 100%;
+      height: 8px;
+      border-radius: 4px;
+      background: linear-gradient(90deg, #e1bee7, #f8bbd0, #ffcdd2);
+      outline: none;
+      cursor: pointer;
+    }
+
+    input[type="range"]::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      appearance: none;
+      width: 22px;
+      height: 22px;
+      border-radius: 50%;
+      background: #e91e63;
+      border: 3px solid #fff;
+      box-shadow: 0 1px 6px rgba(233, 30, 99, 0.3);
+      cursor: pointer;
+      transition: transform 0.15s;
+    }
+
+    input[type="range"]::-webkit-slider-thumb:hover {
+      transform: scale(1.25);
+    }
+
+    input[type="range"]::-moz-range-thumb {
+      width: 22px;
+      height: 22px;
+      border-radius: 50%;
+      background: #e91e63;
+      border: 3px solid #fff;
+      box-shadow: 0 1px 6px rgba(233, 30, 99, 0.3);
+      cursor: pointer;
+    }
+
+    /* Visualization */
+    .viz-section {
+      margin: 2rem 0;
+    }
+
+    .viz-section h2 {
+      font-size: 1.3rem;
+      margin-bottom: 0.4rem;
+      color: #ad1457;
+    }
+
+    .viz-section p.viz-desc {
+      font-size: 0.8rem;
+      color: #c48b9f;
+      margin-bottom: 1rem;
+      font-style: italic;
+    }
+
+    .canvas-wrapper {
+      position: relative;
+      background: #fff5f7;
+      border: 1.5px solid #f8bbd0;
+      border-radius: 14px;
+      overflow: hidden;
+      aspect-ratio: 1.4;
+    }
+
+    canvas#vizCanvas {
+      width: 100%;
+      height: 100%;
+      display: block;
+    }
+
+    .canvas-legend {
+      display: flex;
+      justify-content: center;
+      gap: 2rem;
+      margin-top: 0.75rem;
+      font-size: 0.8rem;
+      color: #9c6680;
+    }
+
+    .legend-item {
+      display: flex;
+      align-items: center;
+      gap: 0.4rem;
+    }
+
+    .legend-dot {
+      width: 12px;
+      height: 12px;
+      border-radius: 3px;
+    }
+
+    /* Training Section */
+    .training-section {
+      margin: 2rem 0;
+    }
+
+    .training-toggle {
+      background: #fff5f7;
+      border: 1.5px solid #f8bbd0;
+      color: #ad1457;
+      padding: 0.6rem 1.2rem;
+      border-radius: 10px;
+      cursor: pointer;
+      font-family: inherit;
+      font-size: 0.9rem;
+      transition: all 0.2s;
+      width: 100%;
+      font-weight: 600;
+    }
+
+    .training-toggle:hover {
+      background: #fce4ec;
+      border-color: #e91e63;
+    }
+
+    .training-content {
+      display: none;
+      margin-top: 1rem;
+      background: #fff5f7;
+      border: 1.5px solid #f8bbd0;
+      border-radius: 14px;
+      padding: 1.25rem;
+    }
+
+    .training-content.open { display: block; }
+
+    .scenarios {
+      display: flex;
+      flex-direction: column;
+      gap: 0.75rem;
+      margin-bottom: 1rem;
+    }
+
+    .scenario-btn {
+      background: #fff0f3;
+      border: 1.5px solid #f8bbd0;
+      color: #6d4c5e;
+      padding: 0.75rem 1rem;
+      border-radius: 10px;
+      cursor: pointer;
+      font-family: inherit;
+      font-size: 0.85rem;
+      text-align: left;
+      transition: all 0.2s;
+    }
+
+    .scenario-btn:hover {
+      border-color: #e91e63;
+      background: #fce4ec;
+    }
+
+    .scenario-name {
+      font-weight: 600;
+      margin-bottom: 0.2rem;
+      color: #ad1457;
+    }
+
+    .scenario-desc {
+      font-size: 0.75rem;
+      color: #c48b9f;
+    }
+
+    .train-controls {
+      display: flex;
+      gap: 0.75rem;
+      flex-wrap: wrap;
+    }
+
+    .train-btn {
+      background: #e91e63;
+      border: none;
+      color: #fff;
+      padding: 0.6rem 1.2rem;
+      border-radius: 10px;
+      cursor: pointer;
+      font-family: inherit;
+      font-size: 0.85rem;
+      font-weight: 600;
+      transition: all 0.2s;
+    }
+
+    .train-btn:hover { background: #c2185b; }
+
+    .train-btn.secondary {
+      background: #f8bbd0;
+      color: #880e4f;
+    }
+
+    .train-btn.secondary:hover {
+      background: #f48fb1;
+    }
+
+    .examples-list {
+      margin: 1rem 0;
+      font-size: 0.8rem;
+      color: #9c6680;
+    }
+
+    .example-item {
+      padding: 0.4rem 0;
+      border-bottom: 1px solid #f8bbd0;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .example-remove {
+      background: none;
+      border: none;
+      color: #c48b9f;
+      cursor: pointer;
+      font-size: 1rem;
+      padding: 0 0.25rem;
+    }
+
+    .example-remove:hover { color: #e91e63; }
+
+    .weights-display {
+      margin-top: 1rem;
+      padding: 0.75rem;
+      background: #fce4ec;
+      border-radius: 10px;
+      font-size: 0.75rem;
+      color: #ad1457;
+      font-family: monospace;
+    }
+
+    .training-content > p {
+      font-size: 0.8rem;
+      color: #9c6680;
+      margin-bottom: 1rem;
+      font-style: italic;
+    }
+
+    /* Responsive */
+    @media (max-width: 600px) {
+      .container { padding: 1rem 1rem 3rem; }
+      .slider-group { padding: 0.75rem 1rem; }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <header>
+      <h1>Should I Break No Contact?</h1>
+      <p>a single neuron tries to save you from yourself</p>
+    </header>
+
+    <!-- Stick figures -->
+    <div class="stickmen-row">
+      <canvas class="stickman-canvas" id="stick1"></canvas>
+      <canvas class="stickman-canvas" id="stick2"></canvas>
+      <canvas class="stickman-canvas" id="stick3"></canvas>
+    </div>
+
+    <!-- Output -->
+    <div class="output-section" id="outputSection">
+      <div class="output-value" id="outputValue">0.50</div>
+      <div class="output-label" id="outputLabel">hold me back</div>
+      <div class="output-sublabel">neuron activation</div>
+    </div>
+
+    <!-- Sliders -->
+    <div class="sliders-section" id="slidersSection"></div>
+
+    <!-- Visualization -->
+    <div class="viz-section">
+      <h2>Decision Boundary</h2>
+      <p class="viz-desc">emotional state vs. time of night (other inputs held at current values)</p>
+      <div class="canvas-wrapper">
+        <canvas id="vizCanvas"></canvas>
+      </div>
+      <div class="canvas-legend">
+        <div class="legend-item">
+          <div class="legend-dot" style="background: #e1bee7;"></div>
+          <span>PUT THE PHONE DOWN</span>
+        </div>
+        <div class="legend-item">
+          <div class="legend-dot" style="background: #f48fb1;"></div>
+          <span>SEND IT</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Training -->
+    <div class="training-section">
+      <button class="training-toggle" id="trainingToggle">training mode</button>
+      <div class="training-content" id="trainingContent">
+        <p>Load a scenario or add the current slider values as a training example, then train the neuron.</p>
+        <div class="scenarios">
+          <button class="scenario-btn" data-scenario="0">
+            <div class="scenario-name">The 2am vulnerability spiral</div>
+            <div class="scenario-desc">Late night, emotional, alone, no hints. Target: resist (0.2)</div>
+          </button>
+          <button class="scenario-btn" data-scenario="1">
+            <div class="scenario-name">Healthy daytime check-in after 6 months</div>
+            <div class="scenario-desc">Calm, daytime, friends around, no hints. Target: cautious (0.3)</div>
+          </button>
+          <button class="scenario-btn" data-scenario="2">
+            <div class="scenario-name">They're breadcrumbing and you're alone at night</div>
+            <div class="scenario-desc">Late, emotional, alone, heavy hints. Target: max danger (0.9)</div>
+          </button>
+        </div>
+        <div class="examples-list" id="examplesList"></div>
+        <div class="train-controls">
+          <button class="train-btn secondary" id="addExampleBtn">+ Add current as example</button>
+          <button class="train-btn" id="trainBtn">Train neuron</button>
+          <button class="train-btn secondary" id="resetBtn">Reset weights</button>
+        </div>
+        <div class="weights-display" id="weightsDisplay"></div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // --- Stick Figures ---
+    function drawStickPerson(canvasId, mood, phoneHeld) {
+      const c = document.getElementById(canvasId);
+      const dpr = window.devicePixelRatio || 1;
+      c.width = 80 * dpr;
+      c.height = 100 * dpr;
+      const ctx = c.getContext('2d');
+      ctx.scale(dpr, dpr);
+
+      const col = '#ad1457';
+      ctx.strokeStyle = col;
+      ctx.fillStyle = col;
+      ctx.lineWidth = 2;
+      ctx.lineCap = 'round';
+      ctx.lineJoin = 'round';
+
+      // Head
+      ctx.beginPath();
+      ctx.arc(40, 18, 10, 0, Math.PI * 2);
+      ctx.stroke();
+
+      // Face
+      if (mood === 'happy') {
+        // eyes
+        ctx.beginPath(); ctx.arc(36, 16, 1.5, 0, Math.PI * 2); ctx.fill();
+        ctx.beginPath(); ctx.arc(44, 16, 1.5, 0, Math.PI * 2); ctx.fill();
+        // smile
+        ctx.beginPath(); ctx.arc(40, 19, 5, 0.1, Math.PI - 0.1); ctx.stroke();
+      } else if (mood === 'worried') {
+        // eyes
+        ctx.beginPath(); ctx.arc(36, 16, 1.5, 0, Math.PI * 2); ctx.fill();
+        ctx.beginPath(); ctx.arc(44, 16, 1.5, 0, Math.PI * 2); ctx.fill();
+        // wavy mouth
+        ctx.beginPath();
+        ctx.moveTo(35, 22); ctx.quadraticCurveTo(37.5, 20, 40, 22); ctx.quadraticCurveTo(42.5, 24, 45, 22);
+        ctx.stroke();
+      } else {
+        // crying - x eyes
+        ctx.beginPath(); ctx.moveTo(34, 14); ctx.lineTo(38, 18); ctx.moveTo(38, 14); ctx.lineTo(34, 18); ctx.stroke();
+        ctx.beginPath(); ctx.moveTo(42, 14); ctx.lineTo(46, 18); ctx.moveTo(46, 14); ctx.lineTo(42, 18); ctx.stroke();
+        // frown
+        ctx.beginPath(); ctx.arc(40, 26, 4, Math.PI + 0.3, -0.3); ctx.stroke();
+        // tears
+        ctx.fillStyle = '#64b5f6';
+        ctx.beginPath(); ctx.ellipse(33, 22, 1.5, 3, 0, 0, Math.PI * 2); ctx.fill();
+        ctx.beginPath(); ctx.ellipse(47, 22, 1.5, 3, 0, 0, Math.PI * 2); ctx.fill();
+        ctx.fillStyle = col;
+      }
+
+      // Body
+      ctx.beginPath();
+      ctx.moveTo(40, 28);
+      ctx.lineTo(40, 58);
+      ctx.stroke();
+
+      // Legs
+      ctx.beginPath();
+      ctx.moveTo(40, 58);
+      ctx.lineTo(28, 82);
+      ctx.moveTo(40, 58);
+      ctx.lineTo(52, 82);
+      ctx.stroke();
+
+      // Arms
+      if (phoneHeld) {
+        // One arm up holding phone
+        ctx.beginPath();
+        ctx.moveTo(40, 38);
+        ctx.lineTo(58, 30);
+        ctx.stroke();
+        // Phone
+        ctx.strokeStyle = '#e91e63';
+        ctx.lineWidth = 1.5;
+        ctx.strokeRect(56, 24, 10, 14);
+        // Screen glow
+        ctx.fillStyle = 'rgba(233, 30, 99, 0.2)';
+        ctx.fillRect(57.5, 26, 7, 10);
+        ctx.strokeStyle = col;
+        ctx.lineWidth = 2;
+        // Other arm down
+        ctx.beginPath();
+        ctx.moveTo(40, 38);
+        ctx.lineTo(24, 52);
+        ctx.stroke();
+      } else {
+        // Arms down / relaxed
+        ctx.beginPath();
+        ctx.moveTo(40, 38);
+        ctx.lineTo(22, 50);
+        ctx.moveTo(40, 38);
+        ctx.lineTo(58, 50);
+        ctx.stroke();
+      }
+    }
+
+    function updateStickFigures(output) {
+      if (output < 0.35) {
+        drawStickPerson('stick1', 'happy', false);
+        drawStickPerson('stick2', 'happy', false);
+        drawStickPerson('stick3', 'happy', false);
+      } else if (output < 0.65) {
+        drawStickPerson('stick1', 'worried', false);
+        drawStickPerson('stick2', 'worried', true);
+        drawStickPerson('stick3', 'worried', false);
+      } else {
+        drawStickPerson('stick1', 'crying', false);
+        drawStickPerson('stick2', 'crying', true);
+        drawStickPerson('stick3', 'crying', true);
+      }
+    }
+
+    // --- Neuron Model ---
+    const DEFAULT_WEIGHTS = [0.7, 0.9, 0.6, 0.7, 0.8];
+    const DEFAULT_BIAS = -0.3;
+
+    let weights = [...DEFAULT_WEIGHTS];
+    let bias = DEFAULT_BIAS;
+
+    const sliderConfigs = [
+      { label: "Time since last contact", low: "literally yesterday", high: "it's been years", default: 0.5 },
+      { label: "Current emotional state", low: "so grounded", high: "i need therapy", default: 0.5 },
+      { label: "Time of night", low: "the sun is out", high: "prime demon time hours", default: 0.3 },
+      { label: "Friends available to stop you", low: "they're actively protesting", high: "i'm completely alone", default: 0.5 },
+      { label: "Amount of hints they're dropping", low: "total silence", high: "feeding my delusions", default: 0.3 },
+    ];
+
+    const outputLabels = [
+      { max: 0.2, label: "absolutely not", color: "#7b1fa2" },
+      { max: 0.4, label: "don't do it", color: "#9c27b0" },
+      { max: 0.6, label: "hold me back", color: "#d81b60" },
+      { max: 0.8, label: "perchance", color: "#e91e63" },
+      { max: 1.01, label: "let's get sendy", color: "#f50057" },
+    ];
+
+    const scenarios = [
+      { inputs: [0.3, 0.8, 0.9, 0.8, 0.2], target: 0.2 },
+      { inputs: [0.5, 0.2, 0.1, 0.3, 0.1], target: 0.3 },
+      { inputs: [0.3, 0.7, 0.8, 0.9, 0.9], target: 0.9 },
+    ];
+
+    let trainingExamples = [];
+    let inputs = sliderConfigs.map(c => c.default);
+
+    function sigmoid(x) { return 1 / (1 + Math.exp(-x)); }
+
+    function computeOutput(inp, w, b) {
+      const sum = inp.reduce((acc, v, i) => acc + v * w[i], 0) + b;
+      return sigmoid(sum);
+    }
+
+    function getOutputInfo(val) {
+      for (const o of outputLabels) {
+        if (val < o.max) return o;
+      }
+      return outputLabels[outputLabels.length - 1];
+    }
+
+    // --- UI: Build Sliders ---
+    const slidersSection = document.getElementById('slidersSection');
+
+    sliderConfigs.forEach((config, i) => {
+      const group = document.createElement('div');
+      group.className = 'slider-group';
+      group.innerHTML = `
+        <div class="slider-header">
+          <span class="slider-label">${config.label}</span>
+          <span class="slider-value" id="sv${i}">${config.default.toFixed(2)}</span>
+        </div>
+        <input type="range" id="slider${i}" min="0" max="100" value="${config.default * 100}" />
+        <div class="slider-range-labels">
+          <span>${config.low}</span>
+          <span>${config.high}</span>
+        </div>
+      `;
+      slidersSection.appendChild(group);
+
+      const slider = document.getElementById(`slider${i}`);
+      slider.addEventListener('input', () => {
+        inputs[i] = slider.value / 100;
+        document.getElementById(`sv${i}`).textContent = inputs[i].toFixed(2);
+        update();
+      });
+    });
+
+    // --- UI: Update ---
+    function update() {
+      const output = computeOutput(inputs, weights, bias);
+      const info = getOutputInfo(output);
+
+      const outputValue = document.getElementById('outputValue');
+      const outputLabel = document.getElementById('outputLabel');
+      const outputSection = document.getElementById('outputSection');
+
+      outputValue.textContent = output.toFixed(2);
+      outputValue.style.color = info.color;
+      outputLabel.textContent = info.label;
+      outputLabel.style.color = info.color;
+
+      // Glow effect
+      const intensity = Math.floor(output * 30);
+      if (output < 0.5) {
+        outputSection.style.borderColor = '#e1bee7';
+        outputSection.style.boxShadow = `0 0 ${intensity}px rgba(206, 147, 216, 0.2)`;
+      } else {
+        outputSection.style.borderColor = '#f48fb1';
+        outputSection.style.boxShadow = `0 0 ${intensity}px rgba(233, 30, 99, 0.15)`;
+      }
+
+      updateStickFigures(output);
+      drawVisualization();
+      updateWeightsDisplay();
+    }
+
+    // --- Visualization ---
+    function drawVisualization() {
+      const canvas = document.getElementById('vizCanvas');
+      const rect = canvas.parentElement.getBoundingClientRect();
+      const dpr = window.devicePixelRatio || 1;
+      canvas.width = rect.width * dpr;
+      canvas.height = rect.height * dpr;
+      const ctx = canvas.getContext('2d');
+      ctx.scale(dpr, dpr);
+      const W = rect.width;
+      const H = rect.height;
+
+      const pad = { top: 30, right: 20, bottom: 45, left: 55 };
+      const plotW = W - pad.left - pad.right;
+      const plotH = H - pad.top - pad.bottom;
+
+      // Draw heatmap
+      const res = 80;
+      const cellW = plotW / res;
+      const cellH = plotH / res;
+
+      for (let xi = 0; xi < res; xi++) {
+        for (let yi = 0; yi < res; yi++) {
+          const timeOfNight = xi / (res - 1);
+          const emotional = 1 - yi / (res - 1);
+
+          const testInputs = [...inputs];
+          testInputs[1] = emotional;
+          testInputs[2] = timeOfNight;
+
+          const out = computeOutput(testInputs, weights, bias);
+
+          let r, g, b;
+          if (out < 0.5) {
+            // Pastel lavender/purple zone
+            const t = out / 0.5;
+            r = Math.floor(225 + t * 10);
+            g = Math.floor(210 - t * 40);
+            b = Math.floor(240 - t * 10);
+          } else {
+            // Pastel pink/rose zone
+            const t = (out - 0.5) / 0.5;
+            r = Math.floor(245 - t * 10);
+            g = Math.floor(170 - t * 50);
+            b = Math.floor(190 - t * 20);
+          }
+
+          ctx.fillStyle = `rgb(${r},${g},${b})`;
+          ctx.fillRect(
+            pad.left + xi * cellW,
+            pad.top + yi * cellH,
+            cellW + 1,
+            cellH + 1
+          );
+        }
+      }
+
+      // Decision boundary
+      ctx.strokeStyle = '#880e4f';
+      ctx.lineWidth = 2.5;
+      ctx.setLineDash([8, 5]);
+      ctx.beginPath();
+      let started = false;
+
+      for (let xi = 0; xi <= res; xi++) {
+        const timeOfNight = xi / res;
+        const otherSum = weights[0] * inputs[0] + weights[2] * timeOfNight + weights[3] * inputs[3] + weights[4] * inputs[4] + bias;
+        const emotional = -otherSum / weights[1];
+
+        if (emotional >= 0 && emotional <= 1) {
+          const px = pad.left + xi / res * plotW;
+          const py = pad.top + (1 - emotional) * plotH;
+          if (!started) { ctx.moveTo(px, py); started = true; }
+          else ctx.lineTo(px, py);
+        }
+      }
+      ctx.stroke();
+      ctx.setLineDash([]);
+
+      // Draw little stick figures on the plot
+      const cx = pad.left + inputs[2] * plotW;
+      const cy = pad.top + (1 - inputs[1]) * plotH;
+      const currentOut = computeOutput(inputs, weights, bias);
+      drawMiniStick(ctx, cx, cy, currentOut >= 0.5);
+
+      // Training examples as mini dots
+      trainingExamples.forEach(ex => {
+        const ex_x = pad.left + ex.inputs[2] * plotW;
+        const ex_y = pad.top + (1 - ex.inputs[1]) * plotH;
+        ctx.beginPath();
+        ctx.arc(ex_x, ex_y, 5, 0, Math.PI * 2);
+        ctx.fillStyle = ex.target >= 0.5 ? '#e91e63' : '#9c27b0';
+        ctx.globalAlpha = 0.6;
+        ctx.fill();
+        ctx.globalAlpha = 1;
+        ctx.strokeStyle = '#fff';
+        ctx.lineWidth = 1.5;
+        ctx.stroke();
+      });
+
+      // Zone labels
+      ctx.font = 'bold 12px Century Schoolbook, Georgia, serif';
+      ctx.textAlign = 'center';
+      ctx.fillStyle = '#7b1fa2';
+      ctx.globalAlpha = 0.6;
+      ctx.fillText('PUT THE PHONE DOWN', pad.left + plotW * 0.3, pad.top + plotH * 0.88);
+      ctx.fillStyle = '#c2185b';
+      ctx.fillText('SEND IT', pad.left + plotW * 0.7, pad.top + plotH * 0.12);
+      ctx.globalAlpha = 1;
+
+      // Axes
+      ctx.strokeStyle = '#d4a0b0';
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.moveTo(pad.left, pad.top);
+      ctx.lineTo(pad.left, pad.top + plotH);
+      ctx.lineTo(pad.left + plotW, pad.top + plotH);
+      ctx.stroke();
+
+      // Axis labels
+      ctx.fillStyle = '#9c6680';
+      ctx.font = '12px Century Schoolbook, Georgia, serif';
+      ctx.textAlign = 'center';
+      ctx.fillText('Time of night', pad.left + plotW / 2, H - 5);
+
+      ctx.save();
+      ctx.translate(14, pad.top + plotH / 2);
+      ctx.rotate(-Math.PI / 2);
+      ctx.fillText('Emotional state', 0, 0);
+      ctx.restore();
+
+      // Tick labels
+      ctx.fillStyle = '#c48b9f';
+      ctx.font = 'italic 10px Century Schoolbook, Georgia, serif';
+      ctx.textAlign = 'center';
+      ctx.fillText('sun is out', pad.left, pad.top + plotH + 16);
+      ctx.fillText('demon hours', pad.left + plotW, pad.top + plotH + 16);
+
+      ctx.textAlign = 'right';
+      ctx.fillText('grounded', pad.left - 6, pad.top + plotH + 4);
+      ctx.fillText('need therapy', pad.left - 6, pad.top + 10);
+    }
+
+    // Mini stick figure on the chart
+    function drawMiniStick(ctx, x, y, danger) {
+      const col = danger ? '#c2185b' : '#7b1fa2';
+      ctx.strokeStyle = col;
+      ctx.fillStyle = col;
+      ctx.lineWidth = 1.5;
+      ctx.lineCap = 'round';
+
+      // Head
+      ctx.beginPath();
+      ctx.arc(x, y - 14, 5, 0, Math.PI * 2);
+      ctx.stroke();
+
+      // Eyes
+      ctx.beginPath(); ctx.arc(x - 2, y - 15, 0.8, 0, Math.PI * 2); ctx.fill();
+      ctx.beginPath(); ctx.arc(x + 2, y - 15, 0.8, 0, Math.PI * 2); ctx.fill();
+
+      if (danger) {
+        // Distressed mouth
+        ctx.beginPath(); ctx.arc(x, y - 10, 2.5, Math.PI + 0.3, -0.3); ctx.stroke();
+      } else {
+        // Smile
+        ctx.beginPath(); ctx.arc(x, y - 13, 2.5, 0.2, Math.PI - 0.2); ctx.stroke();
+      }
+
+      // Body
+      ctx.beginPath(); ctx.moveTo(x, y - 9); ctx.lineTo(x, y); ctx.stroke();
+      // Arms
+      ctx.beginPath(); ctx.moveTo(x - 7, y - 5); ctx.lineTo(x + 7, y - 5); ctx.stroke();
+      // Legs
+      ctx.beginPath();
+      ctx.moveTo(x, y); ctx.lineTo(x - 5, y + 8);
+      ctx.moveTo(x, y); ctx.lineTo(x + 5, y + 8);
+      ctx.stroke();
+
+      // Phone if danger
+      if (danger) {
+        ctx.strokeStyle = '#e91e63';
+        ctx.lineWidth = 1;
+        ctx.strokeRect(x + 7, y - 9, 5, 7);
+      }
+
+      ctx.lineCap = 'butt';
+    }
+
+    // --- Training ---
+    document.getElementById('trainingToggle').addEventListener('click', () => {
+      document.getElementById('trainingContent').classList.toggle('open');
+    });
+
+    document.querySelectorAll('.scenario-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const idx = parseInt(btn.dataset.scenario);
+        const s = scenarios[idx];
+        trainingExamples.push({ inputs: [...s.inputs], target: s.target });
+        s.inputs.forEach((v, i) => {
+          inputs[i] = v;
+          document.getElementById(`slider${i}`).value = v * 100;
+          document.getElementById(`sv${i}`).textContent = v.toFixed(2);
+        });
+        renderExamples();
+        update();
+      });
+    });
+
+    document.getElementById('addExampleBtn').addEventListener('click', () => {
+      const output = computeOutput(inputs, weights, bias);
+      trainingExamples.push({ inputs: [...inputs], target: output });
+      renderExamples();
+    });
+
+    document.getElementById('resetBtn').addEventListener('click', () => {
+      weights = [...DEFAULT_WEIGHTS];
+      bias = DEFAULT_BIAS;
+      trainingExamples = [];
+      renderExamples();
+      update();
+    });
+
+    document.getElementById('trainBtn').addEventListener('click', () => {
+      if (trainingExamples.length === 0) return;
+      const lr = 0.5;
+      const epochs = 500;
+
+      for (let e = 0; e < epochs; e++) {
+        for (const ex of trainingExamples) {
+          const out = computeOutput(ex.inputs, weights, bias);
+          const error = ex.target - out;
+          const grad = error * out * (1 - out);
+
+          for (let i = 0; i < 5; i++) {
+            weights[i] += lr * grad * ex.inputs[i];
+          }
+          bias += lr * grad;
+        }
+      }
+      update();
+    });
+
+    function renderExamples() {
+      const list = document.getElementById('examplesList');
+      if (trainingExamples.length === 0) {
+        list.innerHTML = '';
+        return;
+      }
+      list.innerHTML = '<div style="margin-bottom:0.5rem;font-weight:600;color:#ad1457;">Training examples:</div>' +
+        trainingExamples.map((ex, i) =>
+          `<div class="example-item">
+            <span>[${ex.inputs.map(v => v.toFixed(1)).join(', ')}] &rarr; target: ${ex.target.toFixed(2)}</span>
+            <button class="example-remove" data-idx="${i}">&times;</button>
+          </div>`
+        ).join('');
+
+      list.querySelectorAll('.example-remove').forEach(btn => {
+        btn.addEventListener('click', () => {
+          trainingExamples.splice(parseInt(btn.dataset.idx), 1);
+          renderExamples();
+          update();
+        });
+      });
+    }
+
+    function updateWeightsDisplay() {
+      document.getElementById('weightsDisplay').textContent =
+        `weights: [${weights.map(w => w.toFixed(3)).join(', ')}]  bias: ${bias.toFixed(3)}`;
+    }
+
+    // --- Init ---
+    window.addEventListener('resize', update);
+    update();
+  </script>
+</body>
+</html>
