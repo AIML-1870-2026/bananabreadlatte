@@ -3,213 +3,985 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Snake Game</title>
+    <title>Bread Chase</title>
     <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-
+        * { margin: 0; padding: 0; box-sizing: border-box; }
         body {
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            min-height: 100vh;
-            background: #1a1a2e;
+            display: flex; justify-content: center; align-items: center;
+            min-height: 100vh; background: #f5e6d0;
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            flex-direction: column;
-            gap: 16px;
+            overflow: hidden;
         }
-
-        #score {
-            color: #e0e0e0;
-            font-size: 24px;
-            font-weight: 600;
-            letter-spacing: 1px;
+        #gameContainer {
+            position: relative;
+            display: flex; flex-direction: column; align-items: center;
         }
-
-        canvas {
-            border: 2px solid #16213e;
-            border-radius: 4px;
-            background: #0f3460;
-        }
-
-        #message {
-            color: #e94560;
-            font-size: 18px;
-            height: 24px;
-            font-weight: 500;
-        }
+        canvas { display: block; border-radius: 6px; }
     </style>
 </head>
 <body>
-    <div id="score">Score: 0</div>
-    <canvas id="game" width="400" height="400"></canvas>
-    <div id="message"></div>
+<div id="gameContainer">
+    <canvas id="game"></canvas>
+</div>
+<script>
+const canvas = document.getElementById('game');
+const ctx = canvas.getContext('2d');
 
-    <script>
-        const canvas = document.getElementById('game');
-        const ctx = canvas.getContext('2d');
-        const scoreEl = document.getElementById('score');
-        const messageEl = document.getElementById('message');
+// --- Constants ---
+const GRID = 30;
+const CELL = 20;
+const W = GRID * CELL;
+const H = GRID * CELL;
+canvas.width = W;
+canvas.height = H;
 
-        const gridSize = 20;
-        const tileCount = canvas.width / gridSize;
+const WALL = 1;
+const PLAY_X = WALL;
+const PLAY_Y = WALL + 2; // leave room for HUD
+const PLAY_W = GRID - 2 * WALL;
+const PLAY_H = GRID - 2 * WALL - 2;
+canvas.width = GRID * CELL;
+canvas.height = (GRID + 2) * CELL; // extra rows for HUD
 
-        let snake, direction, nextDirection, food, score, gameOver, gameLoop;
+const BASE_TICK = 130; // ms per move
+const COFFEE_TICK = 70;
+const PB_TICK = 220;
+const FREEZE_MS = 1000;
 
-        function init() {
-            snake = [{ x: 10, y: 10 }];
-            direction = { x: 0, y: 0 };
-            nextDirection = { x: 0, y: 0 };
-            score = 0;
-            gameOver = false;
-            messageEl.textContent = '';
-            scoreEl.textContent = 'Score: 0';
-            placeFood();
-            if (gameLoop) clearInterval(gameLoop);
-            gameLoop = setInterval(update, 120);
-        }
+// Power-up types
+const PU_COFFEE = 'coffee';
+const PU_PB = 'peanutbutter';
+const PU_STRAWBERRY = 'strawberry';
+const PU_CHEESE = 'cheese';
+const PU_PRETZEL = 'pretzel';
+const PU_TYPES = [PU_COFFEE, PU_PB, PU_STRAWBERRY, PU_CHEESE, PU_PRETZEL];
 
-        function placeFood() {
-            food = {
-                x: Math.floor(Math.random() * tileCount),
-                y: Math.floor(Math.random() * tileCount)
-            };
-            for (const seg of snake) {
-                if (seg.x === food.x && seg.y === food.y) {
-                    placeFood();
-                    return;
-                }
-            }
-        }
+const PU_DURATION = {
+    [PU_COFFEE]: 10000,
+    [PU_PB]: 10000,
+    [PU_STRAWBERRY]: 15000,
+    [PU_CHEESE]: 8000,
+    [PU_PRETZEL]: 0
+};
 
-        function update() {
-            if (gameOver) return;
+const PU_COLORS = {
+    [PU_COFFEE]: '#5C3317',
+    [PU_PB]: '#C89050',
+    [PU_STRAWBERRY]: '#E8334A',
+    [PU_CHEESE]: '#F5C518',
+    [PU_PRETZEL]: '#8B5E3C'
+};
 
-            direction = { ...nextDirection };
+// --- Game State ---
+let state = 'start'; // start, playing, gameover
+let bread = [];
+let dir = { x: 1, y: 0 };
+let nextDir = { x: 1, y: 0 };
+let score = 0;
+let highScore = parseInt(localStorage.getItem('breadChaseHigh') || '0');
 
-            if (direction.x === 0 && direction.y === 0) {
-                draw();
-                return;
-            }
+let banana = null;
+let sugarCube = null;
+let sugarTimer = 0;
+let powerUp = null; // { type, x, y }
+let puSpawnTimer = 0;
+let activePU = null; // { type, endTime }
+let mouth = null; // { x, y, dir, chomping }
+let mouthActive = false;
+let frozen = false;
+let freezeEnd = 0;
 
-            const head = {
-                x: snake[0].x + direction.x,
-                y: snake[0].y + direction.y
-            };
+let particles = [];
+let lastTime = 0;
+let tickAccum = 0;
+let mouthTickAccum = 0;
+let frame = 0;
 
-            // Wall collision
-            if (head.x < 0 || head.x >= tileCount || head.y < 0 || head.y >= tileCount) {
-                endGame();
-                return;
-            }
+// --- Helpers ---
+function rng(min, max) { return Math.floor(Math.random() * (max - min)) + min; }
 
-            // Self collision
-            for (const seg of snake) {
-                if (seg.x === head.x && seg.y === head.y) {
-                    endGame();
-                    return;
-                }
-            }
+function cellFree(x, y) {
+    for (const s of bread) if (s.x === x && s.y === y) return false;
+    if (banana && banana.x === x && banana.y === y) return false;
+    if (sugarCube && sugarCube.x === x && sugarCube.y === y) return false;
+    if (powerUp && powerUp.x === x && powerUp.y === y) return false;
+    if (mouth && mouth.x === x && mouth.y === y) return false;
+    return true;
+}
 
-            snake.unshift(head);
+function randomFreeCell() {
+    let tries = 0;
+    while (tries < 500) {
+        const x = rng(PLAY_X, PLAY_X + PLAY_W);
+        const y = rng(PLAY_Y, PLAY_Y + PLAY_H);
+        if (cellFree(x, y)) return { x, y };
+        tries++;
+    }
+    return { x: PLAY_X + 1, y: PLAY_Y + 1 };
+}
 
-            if (head.x === food.x && head.y === food.y) {
-                score++;
-                scoreEl.textContent = 'Score: ' + score;
-                placeFood();
-            } else {
-                snake.pop();
-            }
+function addPoints(pts) {
+    if (activePU && activePU.type === PU_STRAWBERRY) pts *= 2;
+    score += pts;
+    if (score > highScore) {
+        highScore = score;
+        localStorage.setItem('breadChaseHigh', String(highScore));
+    }
+}
 
-            draw();
-        }
-
-        function draw() {
-            // Background
-            ctx.fillStyle = '#0f3460';
-            ctx.fillRect(0, 0, canvas.width, canvas.height);
-
-            // Grid lines
-            ctx.strokeStyle = 'rgba(255, 255, 255, 0.03)';
-            ctx.lineWidth = 0.5;
-            for (let i = 0; i < tileCount; i++) {
-                ctx.beginPath();
-                ctx.moveTo(i * gridSize, 0);
-                ctx.lineTo(i * gridSize, canvas.height);
-                ctx.stroke();
-                ctx.beginPath();
-                ctx.moveTo(0, i * gridSize);
-                ctx.lineTo(canvas.width, i * gridSize);
-                ctx.stroke();
-            }
-
-            // Food
-            ctx.fillStyle = '#e94560';
-            ctx.beginPath();
-            ctx.arc(
-                food.x * gridSize + gridSize / 2,
-                food.y * gridSize + gridSize / 2,
-                gridSize / 2 - 2, 0, Math.PI * 2
-            );
-            ctx.fill();
-
-            // Snake
-            snake.forEach((seg, i) => {
-                ctx.fillStyle = i === 0 ? '#53d769' : '#43b659';
-                ctx.fillRect(
-                    seg.x * gridSize + 1,
-                    seg.y * gridSize + 1,
-                    gridSize - 2,
-                    gridSize - 2
-                );
-                ctx.fillStyle = 'rgba(255,255,255,0.1)';
-                ctx.fillRect(
-                    seg.x * gridSize + 1,
-                    seg.y * gridSize + 1,
-                    gridSize - 2,
-                    (gridSize - 2) / 2
-                );
-            });
-        }
-
-        function endGame() {
-            gameOver = true;
-            clearInterval(gameLoop);
-            messageEl.textContent = 'Game Over! Press Space to restart';
-            draw();
-        }
-
-        document.addEventListener('keydown', (e) => {
-            if (e.key === ' ' && gameOver) {
-                e.preventDefault();
-                init();
-                return;
-            }
-
-            switch (e.key) {
-                case 'ArrowUp':
-                    if (direction.y !== 1) nextDirection = { x: 0, y: -1 };
-                    e.preventDefault();
-                    break;
-                case 'ArrowDown':
-                    if (direction.y !== -1) nextDirection = { x: 0, y: 1 };
-                    e.preventDefault();
-                    break;
-                case 'ArrowLeft':
-                    if (direction.x !== 1) nextDirection = { x: -1, y: 0 };
-                    e.preventDefault();
-                    break;
-                case 'ArrowRight':
-                    if (direction.x !== -1) nextDirection = { x: 1, y: 0 };
-                    e.preventDefault();
-                    break;
-            }
+function spawnParticles(x, y, color, count) {
+    for (let i = 0; i < count; i++) {
+        particles.push({
+            x: x * CELL + CELL / 2,
+            y: y * CELL + CELL / 2,
+            vx: (Math.random() - 0.5) * 4,
+            vy: (Math.random() - 0.5) * 4,
+            life: 0.6 + Math.random() * 0.4,
+            color,
+            size: 2 + Math.random() * 3
         });
+    }
+}
 
-        init();
-    </script>
+// --- Init ---
+function initGame() {
+    const midX = PLAY_X + Math.floor(PLAY_W / 2);
+    const midY = PLAY_Y + Math.floor(PLAY_H / 2);
+    bread = [{ x: midX, y: midY }, { x: midX - 1, y: midY }, { x: midX - 2, y: midY }];
+    dir = { x: 1, y: 0 };
+    nextDir = { x: 1, y: 0 };
+    score = 0;
+    banana = null;
+    sugarCube = null;
+    sugarTimer = 0;
+    powerUp = null;
+    puSpawnTimer = 3000 + Math.random() * 2000;
+    activePU = null;
+    mouth = null;
+    mouthActive = false;
+    frozen = false;
+    freezeEnd = 0;
+    particles = [];
+    tickAccum = 0;
+    mouthTickAccum = 0;
+    spawnBanana();
+    spawnSugarCube();
+}
+
+function spawnBanana() {
+    const pos = randomFreeCell();
+    banana = { x: pos.x, y: pos.y };
+}
+
+function spawnSugarCube() {
+    sugarTimer = 8000 + Math.random() * 12000;
+    sugarCube = null;
+}
+
+function spawnPowerUp() {
+    const type = PU_TYPES[rng(0, PU_TYPES.length)];
+    const pos = randomFreeCell();
+    powerUp = { type, x: pos.x, y: pos.y };
+}
+
+function spawnMouth() {
+    if (mouthActive) return;
+    const pos = randomFreeCell();
+    mouth = { x: pos.x, y: pos.y, chomp: 0 };
+    mouthActive = true;
+}
+
+// --- Update ---
+function getCurrentTick() {
+    if (activePU && activePU.type === PU_COFFEE) return COFFEE_TICK;
+    if (activePU && activePU.type === PU_PB) return PB_TICK;
+    return BASE_TICK;
+}
+
+function update(dt) {
+    if (state !== 'playing') return;
+
+    frame++;
+
+    // Update particles
+    particles = particles.filter(p => {
+        p.x += p.vx;
+        p.y += p.vy;
+        p.life -= dt;
+        p.vy += 2 * dt;
+        return p.life > 0;
+    });
+
+    // Check active power-up expiry
+    if (activePU && activePU.type !== PU_PRETZEL) {
+        if (performance.now() >= activePU.endTime) {
+            activePU = null;
+        }
+    }
+
+    // Frozen state
+    if (frozen) {
+        if (performance.now() >= freezeEnd) {
+            frozen = false;
+        }
+        // Mouth can still move while bread is frozen
+        updateMouth(dt);
+        return;
+    }
+
+    // Sugar cube spawn timer
+    if (!sugarCube && sugarTimer > 0) {
+        sugarTimer -= dt * 1000;
+        if (sugarTimer <= 0) {
+            const pos = randomFreeCell();
+            sugarCube = { x: pos.x, y: pos.y };
+        }
+    }
+
+    // Power-up spawn timer
+    if (!powerUp) {
+        puSpawnTimer -= dt * 1000;
+        if (puSpawnTimer <= 0) {
+            spawnPowerUp();
+        }
+    }
+
+    // Bread movement tick
+    tickAccum += dt * 1000;
+    const tick = getCurrentTick();
+    if (tickAccum >= tick) {
+        tickAccum -= tick;
+        moveBread();
+    }
+
+    // Mouth movement
+    updateMouth(dt);
+}
+
+function moveBread() {
+    dir = { ...nextDir };
+    const head = { x: bread[0].x + dir.x, y: bread[0].y + dir.y };
+
+    // Wall collision - plastic wrap freeze
+    if (head.x < PLAY_X || head.x >= PLAY_X + PLAY_W || head.y < PLAY_Y || head.y >= PLAY_Y + PLAY_H) {
+        if (activePU && activePU.type === PU_CHEESE) {
+            // Phase through walls with cheese
+            if (head.x < PLAY_X) head.x = PLAY_X + PLAY_W - 1;
+            else if (head.x >= PLAY_X + PLAY_W) head.x = PLAY_X;
+            if (head.y < PLAY_Y) head.y = PLAY_Y + PLAY_H - 1;
+            else if (head.y >= PLAY_Y + PLAY_H) head.y = PLAY_Y;
+        } else {
+            frozen = true;
+            freezeEnd = performance.now() + FREEZE_MS;
+            spawnParticles(bread[0].x, bread[0].y, 'rgba(200,220,255,0.8)', 8);
+            return;
+        }
+    }
+
+    // Self collision
+    for (let i = 1; i < bread.length; i++) {
+        if (bread[i].x === head.x && bread[i].y === head.y) {
+            // No self-collision game over in this spec, but we still avoid it
+            return;
+        }
+    }
+
+    bread.unshift(head);
+
+    // Check banana
+    if (banana && head.x === banana.x && head.y === banana.y) {
+        addPoints(10);
+        spawnParticles(banana.x, banana.y, '#FFE135', 10);
+        spawnBanana();
+        // Don't pop - bread grows
+    }
+    // Check sugar cube
+    else if (sugarCube && head.x === sugarCube.x && head.y === sugarCube.y) {
+        addPoints(50);
+        spawnParticles(sugarCube.x, sugarCube.y, '#FFFFFF', 12);
+        sugarCube = null;
+        spawnSugarCube();
+        spawnMouth();
+    }
+    // Check power-up
+    else if (powerUp && head.x === powerUp.x && head.y === powerUp.y) {
+        const pu = powerUp;
+        spawnParticles(pu.x, pu.y, PU_COLORS[pu.type], 10);
+
+        if (pu.type === PU_PRETZEL) {
+            addPoints(15);
+            if (bread.length > 1) {
+                bread.pop(); // shrink
+                bread.pop(); // extra pop since we already added head
+            }
+        } else {
+            addPoints(20);
+            activePU = { type: pu.type, endTime: performance.now() + PU_DURATION[pu.type] };
+        }
+
+        powerUp = null;
+        puSpawnTimer = 3000 + Math.random() * 2000;
+        // Don't pop - grows from eating
+        // Actually power-ups shouldn't grow the bread, so pop
+        bread.pop();
+    }
+    else {
+        bread.pop();
+    }
+}
+
+function updateMouth(dt) {
+    if (!mouthActive || !mouth) return;
+
+    mouth.chomp = (mouth.chomp || 0) + dt * 8;
+
+    mouthTickAccum += dt * 1000;
+    const mouthTick = BASE_TICK * 1.3; // slightly slower than bread
+    if (mouthTickAccum < mouthTick) return;
+    mouthTickAccum -= mouthTick;
+
+    // Move toward bread head with some randomness
+    const head = bread[0];
+    let dx = head.x - mouth.x;
+    let dy = head.y - mouth.y;
+
+    let mx = 0, my = 0;
+    if (Math.random() < 0.3) {
+        // Random movement
+        const dirs = [{ x: 1, y: 0 }, { x: -1, y: 0 }, { x: 0, y: 1 }, { x: 0, y: -1 }];
+        const d = dirs[rng(0, 4)];
+        mx = d.x; my = d.y;
+    } else {
+        // Gravitate toward bread
+        if (Math.abs(dx) > Math.abs(dy)) {
+            mx = dx > 0 ? 1 : -1;
+        } else {
+            my = dy > 0 ? 1 : -1;
+        }
+    }
+
+    const newX = mouth.x + mx;
+    const newY = mouth.y + my;
+
+    // Keep mouth in bounds
+    if (newX >= PLAY_X && newX < PLAY_X + PLAY_W && newY >= PLAY_Y && newY < PLAY_Y + PLAY_H) {
+        mouth.x = newX;
+        mouth.y = newY;
+    }
+
+    // Check collision with bread
+    if (activePU && activePU.type === PU_CHEESE) return; // invincible
+
+    for (let i = 0; i < bread.length; i++) {
+        if (bread[i].x === mouth.x && bread[i].y === mouth.y) {
+            if (bread.length <= 1) {
+                state = 'gameover';
+                return;
+            }
+            bread.pop();
+            spawnParticles(mouth.x, mouth.y, '#E8334A', 8);
+            break;
+        }
+    }
+}
+
+// --- Drawing ---
+function drawCell(x, y) {
+    return { px: x * CELL, py: y * CELL };
+}
+
+function draw() {
+    const now = performance.now();
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+    // Background
+    ctx.fillStyle = '#FFF8EC';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+    // Checkered tablecloth background for play area
+    for (let x = PLAY_X; x < PLAY_X + PLAY_W; x++) {
+        for (let y = PLAY_Y; y < PLAY_Y + PLAY_H; y++) {
+            ctx.fillStyle = (x + y) % 2 === 0 ? '#FFF5E0' : '#FFEDCC';
+            ctx.fillRect(x * CELL, y * CELL, CELL, CELL);
+        }
+    }
+
+    // Walls - bread bag plastic wrap
+    drawWalls();
+
+    // Banana
+    if (banana) drawBanana(banana.x, banana.y);
+
+    // Sugar cube
+    if (sugarCube) drawSugarCube(sugarCube.x, sugarCube.y);
+
+    // Power-up
+    if (powerUp) drawPowerUp(powerUp);
+
+    // Bread
+    drawBread();
+
+    // Mouth
+    if (mouthActive && mouth) drawMouth();
+
+    // Particles
+    for (const p of particles) {
+        ctx.globalAlpha = Math.max(0, p.life);
+        ctx.fillStyle = p.color;
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+        ctx.fill();
+    }
+    ctx.globalAlpha = 1;
+
+    // Frozen overlay
+    if (frozen) {
+        ctx.save();
+        for (const seg of bread) {
+            const { px, py } = drawCell(seg.x, seg.y);
+            ctx.fillStyle = 'rgba(200,230,255,0.45)';
+            ctx.fillRect(px, py, CELL, CELL);
+            // Plastic wrap lines
+            ctx.strokeStyle = 'rgba(255,255,255,0.5)';
+            ctx.lineWidth = 1;
+            for (let i = 0; i < 3; i++) {
+                ctx.beginPath();
+                ctx.moveTo(px + Math.random() * CELL, py);
+                ctx.lineTo(px + Math.random() * CELL, py + CELL);
+                ctx.stroke();
+            }
+        }
+        ctx.restore();
+    }
+
+    // HUD
+    drawHUD();
+
+    // Screens
+    if (state === 'start') drawStartScreen();
+    if (state === 'gameover') drawGameOverScreen();
+}
+
+function drawWalls() {
+    ctx.save();
+    // Top wall
+    for (let x = 0; x < GRID; x++) {
+        for (let wy = 0; wy < PLAY_Y; wy++) {
+            drawWallCell(x, wy);
+        }
+    }
+    // Bottom wall
+    for (let x = 0; x < GRID; x++) {
+        for (let wy = PLAY_Y + PLAY_H; wy < GRID + 2; wy++) {
+            drawWallCell(x, wy);
+        }
+    }
+    // Left wall
+    for (let y = PLAY_Y; y < PLAY_Y + PLAY_H; y++) {
+        for (let wx = 0; wx < PLAY_X; wx++) {
+            drawWallCell(wx, y);
+        }
+    }
+    // Right wall
+    for (let y = PLAY_Y; y < PLAY_Y + PLAY_H; y++) {
+        for (let wx = PLAY_X + PLAY_W; wx < GRID; wx++) {
+            drawWallCell(wx, y);
+        }
+    }
+    ctx.restore();
+}
+
+function drawWallCell(x, y) {
+    const { px, py } = drawCell(x, y);
+    // Plastic wrap look
+    ctx.fillStyle = 'rgba(180, 210, 230, 0.5)';
+    ctx.fillRect(px, py, CELL, CELL);
+    ctx.strokeStyle = 'rgba(255, 255, 255, 0.3)';
+    ctx.lineWidth = 0.5;
+    ctx.strokeRect(px + 1, py + 1, CELL - 2, CELL - 2);
+    // Slight shine
+    const grad = ctx.createLinearGradient(px, py, px + CELL, py + CELL);
+    grad.addColorStop(0, 'rgba(255,255,255,0.2)');
+    grad.addColorStop(0.5, 'rgba(255,255,255,0)');
+    grad.addColorStop(1, 'rgba(255,255,255,0.15)');
+    ctx.fillStyle = grad;
+    ctx.fillRect(px, py, CELL, CELL);
+}
+
+function drawBread() {
+    const hasCheese = activePU && activePU.type === PU_CHEESE;
+    const hasCoffee = activePU && activePU.type === PU_COFFEE;
+    const hasStrawberry = activePU && activePU.type === PU_STRAWBERRY;
+    const hasPB = activePU && activePU.type === PU_PB;
+    const pulse = Math.sin(performance.now() / 200) * 0.15 + 0.85;
+
+    for (let i = bread.length - 1; i >= 0; i--) {
+        const seg = bread[i];
+        const { px, py } = drawCell(seg.x, seg.y);
+        const isHead = i === 0;
+
+        // Glow for power-ups
+        if (activePU) {
+            ctx.save();
+            ctx.globalAlpha = 0.3 * pulse;
+            ctx.fillStyle = PU_COLORS[activePU.type] || '#FFD700';
+            ctx.fillRect(px - 2, py - 2, CELL + 4, CELL + 4);
+            ctx.restore();
+        }
+
+        if (hasCheese) {
+            ctx.globalAlpha = 0.7 + 0.2 * pulse;
+        }
+
+        // Bread body
+        ctx.fillStyle = isHead ? '#D4A04A' : '#C8923A';
+        const r = 3;
+        ctx.beginPath();
+        ctx.moveTo(px + r, py);
+        ctx.lineTo(px + CELL - r, py);
+        ctx.quadraticCurveTo(px + CELL, py, px + CELL, py + r);
+        ctx.lineTo(px + CELL, py + CELL - r);
+        ctx.quadraticCurveTo(px + CELL, py + CELL, px + CELL - r, py + CELL);
+        ctx.lineTo(px + r, py + CELL);
+        ctx.quadraticCurveTo(px, py + CELL, px, py + CELL - r);
+        ctx.lineTo(px, py + r);
+        ctx.quadraticCurveTo(px, py, px + r, py);
+        ctx.fill();
+
+        // Bread crust (top highlight)
+        ctx.fillStyle = isHead ? '#E0B060' : '#D4A04A';
+        ctx.fillRect(px + 2, py + 1, CELL - 4, CELL / 3);
+
+        // Bread holes/texture
+        ctx.fillStyle = 'rgba(160, 110, 50, 0.25)';
+        if ((seg.x + seg.y) % 3 === 0) {
+            ctx.beginPath();
+            ctx.arc(px + CELL * 0.35, py + CELL * 0.55, 2, 0, Math.PI * 2);
+            ctx.fill();
+        }
+        if ((seg.x + seg.y) % 2 === 0) {
+            ctx.beginPath();
+            ctx.arc(px + CELL * 0.65, py + CELL * 0.65, 1.5, 0, Math.PI * 2);
+            ctx.fill();
+        }
+
+        // Eyes on head
+        if (isHead) {
+            ctx.fillStyle = '#333';
+            const ex1 = px + CELL * 0.35;
+            const ex2 = px + CELL * 0.65;
+            const ey = py + CELL * 0.4;
+            ctx.beginPath(); ctx.arc(ex1, ey, 2, 0, Math.PI * 2); ctx.fill();
+            ctx.beginPath(); ctx.arc(ex2, ey, 2, 0, Math.PI * 2); ctx.fill();
+            // Pupils
+            ctx.fillStyle = '#FFF';
+            ctx.beginPath(); ctx.arc(ex1 + 0.5, ey - 0.5, 0.8, 0, Math.PI * 2); ctx.fill();
+            ctx.beginPath(); ctx.arc(ex2 + 0.5, ey - 0.5, 0.8, 0, Math.PI * 2); ctx.fill();
+        }
+
+        ctx.globalAlpha = 1;
+    }
+
+    // Coffee speed trail
+    if (hasCoffee && bread.length > 1) {
+        ctx.save();
+        for (let i = Math.max(1, bread.length - 3); i < bread.length; i++) {
+            const seg = bread[i];
+            ctx.globalAlpha = 0.15 * (1 - i / bread.length);
+            ctx.fillStyle = '#5C3317';
+            ctx.fillRect(seg.x * CELL + 2, seg.y * CELL + 2, CELL - 4, CELL - 4);
+        }
+        ctx.restore();
+    }
+}
+
+function drawBanana(x, y) {
+    const { px, py } = drawCell(x, y);
+    const cx = px + CELL / 2;
+    const cy = py + CELL / 2;
+    // Banana shape
+    ctx.save();
+    ctx.translate(cx, cy);
+    ctx.rotate(-0.3);
+    ctx.fillStyle = '#FFE135';
+    ctx.beginPath();
+    ctx.ellipse(0, 0, CELL * 0.4, CELL * 0.25, 0, 0, Math.PI, true);
+    ctx.fill();
+    ctx.fillStyle = '#FFD700';
+    ctx.beginPath();
+    ctx.ellipse(0, -1, CELL * 0.35, CELL * 0.18, 0, 0, Math.PI, true);
+    ctx.fill();
+    // Stem
+    ctx.strokeStyle = '#8B7D3C';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(CELL * 0.35, -1);
+    ctx.lineTo(CELL * 0.4, -4);
+    ctx.stroke();
+    ctx.restore();
+}
+
+function drawSugarCube(x, y) {
+    const { px, py } = drawCell(x, y);
+    ctx.fillStyle = '#FFFFFF';
+    ctx.fillRect(px + 3, py + 3, CELL - 6, CELL - 6);
+    ctx.strokeStyle = '#DDD';
+    ctx.lineWidth = 1;
+    ctx.strokeRect(px + 3, py + 3, CELL - 6, CELL - 6);
+    // Crystal sparkle
+    ctx.fillStyle = 'rgba(200,220,255,0.6)';
+    const t = performance.now() / 500;
+    ctx.beginPath();
+    ctx.arc(px + 8 + Math.sin(t) * 2, py + 7, 1.5, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.beginPath();
+    ctx.arc(px + 13, py + 12 + Math.cos(t) * 2, 1, 0, Math.PI * 2);
+    ctx.fill();
+    // Warning icon
+    ctx.fillStyle = '#E8334A';
+    ctx.font = '8px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText('!', px + CELL / 2, py + CELL - 2);
+}
+
+function drawPowerUp(pu) {
+    const { px, py } = drawCell(pu.x, pu.y);
+    const cx = px + CELL / 2;
+    const cy = py + CELL / 2;
+    const bob = Math.sin(performance.now() / 300) * 2;
+
+    ctx.save();
+    ctx.translate(0, bob);
+
+    // Glow
+    ctx.globalAlpha = 0.3 + Math.sin(performance.now() / 400) * 0.15;
+    ctx.fillStyle = PU_COLORS[pu.type];
+    ctx.beginPath();
+    ctx.arc(cx, cy, CELL * 0.55, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.globalAlpha = 1;
+
+    switch (pu.type) {
+        case PU_COFFEE:
+            // Coffee bean
+            ctx.fillStyle = '#5C3317';
+            ctx.beginPath();
+            ctx.ellipse(cx, cy, 6, 8, 0, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.strokeStyle = '#3A1F0D';
+            ctx.lineWidth = 1;
+            ctx.beginPath();
+            ctx.moveTo(cx, cy - 6);
+            ctx.quadraticCurveTo(cx - 2, cy, cx, cy + 6);
+            ctx.stroke();
+            break;
+        case PU_PB:
+            // Peanut butter jar
+            ctx.fillStyle = '#C89050';
+            ctx.fillRect(px + 5, py + 4, CELL - 10, CELL - 6);
+            ctx.fillStyle = '#A07030';
+            ctx.fillRect(px + 6, py + 3, CELL - 12, 4);
+            ctx.fillStyle = '#FFF';
+            ctx.font = 'bold 6px sans-serif';
+            ctx.textAlign = 'center';
+            ctx.fillText('PB', cx, cy + 4);
+            break;
+        case PU_STRAWBERRY:
+            // Strawberry
+            ctx.fillStyle = '#E8334A';
+            ctx.beginPath();
+            ctx.moveTo(cx, py + 3);
+            ctx.quadraticCurveTo(px + CELL - 3, cy - 2, cx, py + CELL - 3);
+            ctx.quadraticCurveTo(px + 3, cy - 2, cx, py + 3);
+            ctx.fill();
+            ctx.fillStyle = '#4A8C2A';
+            ctx.beginPath();
+            ctx.ellipse(cx, py + 5, 5, 2, 0, 0, Math.PI * 2);
+            ctx.fill();
+            break;
+        case PU_CHEESE:
+            // Cheese wedge
+            ctx.fillStyle = '#F5C518';
+            ctx.beginPath();
+            ctx.moveTo(px + 4, py + CELL - 4);
+            ctx.lineTo(cx, py + 4);
+            ctx.lineTo(px + CELL - 4, py + CELL - 4);
+            ctx.closePath();
+            ctx.fill();
+            ctx.fillStyle = '#E0A800';
+            ctx.beginPath();
+            ctx.arc(cx - 2, cy + 2, 2, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.beginPath();
+            ctx.arc(cx + 3, cy + 4, 1.5, 0, Math.PI * 2);
+            ctx.fill();
+            break;
+        case PU_PRETZEL:
+            // Pretzel
+            ctx.strokeStyle = '#8B5E3C';
+            ctx.lineWidth = 2.5;
+            ctx.lineCap = 'round';
+            ctx.beginPath();
+            ctx.arc(cx - 3, cy + 1, 4, 0, Math.PI * 2);
+            ctx.stroke();
+            ctx.beginPath();
+            ctx.arc(cx + 3, cy + 1, 4, 0, Math.PI * 2);
+            ctx.stroke();
+            ctx.beginPath();
+            ctx.moveTo(cx, cy - 7);
+            ctx.lineTo(cx - 5, cy + 3);
+            ctx.moveTo(cx, cy - 7);
+            ctx.lineTo(cx + 5, cy + 3);
+            ctx.stroke();
+            // Salt
+            ctx.fillStyle = '#FFF';
+            ctx.beginPath(); ctx.arc(cx - 2, cy - 3, 1, 0, Math.PI * 2); ctx.fill();
+            ctx.beginPath(); ctx.arc(cx + 2, cy + 3, 1, 0, Math.PI * 2); ctx.fill();
+            break;
+    }
+    ctx.restore();
+}
+
+function drawMouth() {
+    const { px, py } = drawCell(mouth.x, mouth.y);
+    const cx = px + CELL / 2;
+    const cy = py + CELL / 2;
+    const chompAngle = Math.abs(Math.sin(mouth.chomp)) * 0.6;
+
+    ctx.save();
+    ctx.translate(cx, cy);
+
+    // Rotate toward bread
+    const dx = bread[0].x - mouth.x;
+    const dy = bread[0].y - mouth.y;
+    const angle = Math.atan2(dy, dx);
+    ctx.rotate(angle);
+
+    // Top jaw
+    ctx.fillStyle = '#E85070';
+    ctx.beginPath();
+    ctx.arc(0, 0, CELL * 0.45, -chompAngle - 0.1, -Math.PI + chompAngle + 0.1, true);
+    ctx.closePath();
+    ctx.fill();
+
+    // Bottom jaw
+    ctx.beginPath();
+    ctx.arc(0, 0, CELL * 0.45, chompAngle + 0.1, Math.PI - chompAngle - 0.1);
+    ctx.closePath();
+    ctx.fill();
+
+    // Teeth
+    ctx.fillStyle = '#FFF';
+    const r = CELL * 0.38;
+    for (let i = -2; i <= 2; i++) {
+        const ta = i * 0.35 - chompAngle * 0.5;
+        ctx.beginPath();
+        ctx.arc(Math.cos(ta) * r, Math.sin(ta) * r - 1, 2, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.beginPath();
+        ctx.arc(Math.cos(-ta + Math.PI) * r * 0.5, Math.sin(-ta) * r + 1, 1.5, 0, Math.PI * 2);
+        ctx.fill();
+    }
+
+    // Eye
+    ctx.fillStyle = '#FFF';
+    ctx.beginPath();
+    ctx.arc(-2, -CELL * 0.2, 3, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = '#111';
+    ctx.beginPath();
+    ctx.arc(-1.5, -CELL * 0.2, 1.5, 0, Math.PI * 2);
+    ctx.fill();
+
+    ctx.restore();
+}
+
+function drawHUD() {
+    const hudY = 0;
+
+    // Background
+    ctx.fillStyle = 'rgba(80, 50, 30, 0.85)';
+    ctx.fillRect(0, 0, canvas.width, PLAY_Y * CELL);
+
+    // Score
+    ctx.fillStyle = '#FFF';
+    ctx.font = 'bold 14px sans-serif';
+    ctx.textAlign = 'left';
+    ctx.fillText('Score: ' + score, 10, 18);
+
+    // Length
+    ctx.textAlign = 'right';
+    ctx.fillText('Length: ' + bread.length, canvas.width - 10, 18);
+
+    // High score
+    ctx.textAlign = 'center';
+    ctx.font = '11px sans-serif';
+    ctx.fillStyle = '#FFD700';
+    ctx.fillText('Best: ' + highScore, canvas.width / 2, 18);
+
+    // Active power-up
+    if (activePU && activePU.type !== PU_PRETZEL) {
+        const remaining = Math.max(0, activePU.endTime - performance.now());
+        const total = PU_DURATION[activePU.type];
+        const pct = remaining / total;
+
+        ctx.fillStyle = '#FFF';
+        ctx.font = 'bold 11px sans-serif';
+        ctx.textAlign = 'center';
+
+        const names = {
+            [PU_COFFEE]: 'COFFEE',
+            [PU_PB]: 'PEANUT BUTTER',
+            [PU_STRAWBERRY]: 'STRAWBERRY 2x',
+            [PU_CHEESE]: 'CHEESE SHIELD'
+        };
+        ctx.fillText(names[activePU.type] || '', canvas.width / 2, 36);
+
+        // Timer bar
+        const barW = 100;
+        const barH = 4;
+        const barX = canvas.width / 2 - barW / 2;
+        const barY = 40;
+        ctx.fillStyle = 'rgba(255,255,255,0.3)';
+        ctx.fillRect(barX, barY, barW, barH);
+        ctx.fillStyle = PU_COLORS[activePU.type];
+        ctx.fillRect(barX, barY, barW * pct, barH);
+    }
+
+    // Frozen indicator
+    if (frozen) {
+        ctx.fillStyle = '#ADD8E6';
+        ctx.font = 'bold 12px sans-serif';
+        ctx.textAlign = 'center';
+        ctx.fillText('WRAPPED!', canvas.width / 2, 36);
+    }
+}
+
+function drawStartScreen() {
+    ctx.fillStyle = 'rgba(0,0,0,0.6)';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+    ctx.fillStyle = '#FFF8EC';
+    ctx.fillRect(canvas.width / 2 - 160, canvas.height / 2 - 120, 320, 240);
+    ctx.strokeStyle = '#C8923A';
+    ctx.lineWidth = 3;
+    ctx.strokeRect(canvas.width / 2 - 160, canvas.height / 2 - 120, 320, 240);
+
+    ctx.fillStyle = '#5C3317';
+    ctx.font = 'bold 32px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText('Bread Chase', canvas.width / 2, canvas.height / 2 - 65);
+
+    ctx.fillStyle = '#8B6914';
+    ctx.font = '13px sans-serif';
+    ctx.fillText('A whimsical twist on the classic Snake', canvas.width / 2, canvas.height / 2 - 40);
+
+    ctx.fillStyle = '#333';
+    ctx.font = '14px sans-serif';
+    const lines = [
+        'Arrow Keys / WASD to move',
+        'Eat bananas to grow',
+        'Collect power-ups for special abilities',
+        'Watch out for the chomping mouth!',
+        'Walls will freeze you in plastic wrap'
+    ];
+    lines.forEach((line, i) => {
+        ctx.fillText(line, canvas.width / 2, canvas.height / 2 - 10 + i * 22);
+    });
+
+    ctx.fillStyle = '#D4A04A';
+    ctx.font = 'bold 16px sans-serif';
+    const blink = Math.sin(performance.now() / 500) > 0;
+    if (blink) ctx.fillText('Press Space or Click to Start', canvas.width / 2, canvas.height / 2 + 105);
+}
+
+function drawGameOverScreen() {
+    ctx.fillStyle = 'rgba(0,0,0,0.65)';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+    ctx.fillStyle = '#FFF8EC';
+    ctx.fillRect(canvas.width / 2 - 140, canvas.height / 2 - 90, 280, 180);
+    ctx.strokeStyle = '#E8334A';
+    ctx.lineWidth = 3;
+    ctx.strokeRect(canvas.width / 2 - 140, canvas.height / 2 - 90, 280, 180);
+
+    ctx.fillStyle = '#E8334A';
+    ctx.font = 'bold 28px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText('Game Over!', canvas.width / 2, canvas.height / 2 - 50);
+
+    ctx.fillStyle = '#333';
+    ctx.font = '16px sans-serif';
+    ctx.fillText('Score: ' + score, canvas.width / 2, canvas.height / 2 - 15);
+    ctx.fillText('Length: ' + bread.length, canvas.width / 2, canvas.height / 2 + 10);
+
+    if (score >= highScore && score > 0) {
+        ctx.fillStyle = '#FFD700';
+        ctx.font = 'bold 14px sans-serif';
+        ctx.fillText('New High Score!', canvas.width / 2, canvas.height / 2 + 35);
+    }
+
+    ctx.fillStyle = '#D4A04A';
+    ctx.font = 'bold 15px sans-serif';
+    const blink = Math.sin(performance.now() / 500) > 0;
+    if (blink) ctx.fillText('Press Space or Click to Restart', canvas.width / 2, canvas.height / 2 + 70);
+}
+
+// --- Input ---
+document.addEventListener('keydown', (e) => {
+    if (state === 'start') {
+        if (e.key === ' ' || e.key === 'Enter') {
+            e.preventDefault();
+            state = 'playing';
+            initGame();
+        }
+        return;
+    }
+    if (state === 'gameover') {
+        if (e.key === ' ' || e.key === 'Enter') {
+            e.preventDefault();
+            state = 'playing';
+            initGame();
+        }
+        return;
+    }
+    if (frozen) return;
+
+    switch (e.key) {
+        case 'ArrowUp': case 'w': case 'W':
+            if (dir.y !== 1) nextDir = { x: 0, y: -1 };
+            e.preventDefault(); break;
+        case 'ArrowDown': case 's': case 'S':
+            if (dir.y !== -1) nextDir = { x: 0, y: 1 };
+            e.preventDefault(); break;
+        case 'ArrowLeft': case 'a': case 'A':
+            if (dir.x !== 1) nextDir = { x: -1, y: 0 };
+            e.preventDefault(); break;
+        case 'ArrowRight': case 'd': case 'D':
+            if (dir.x !== -1) nextDir = { x: 1, y: 0 };
+            e.preventDefault(); break;
+    }
+});
+
+canvas.addEventListener('click', () => {
+    if (state === 'start' || state === 'gameover') {
+        state = 'playing';
+        initGame();
+    }
+});
+
+// --- Game Loop (60fps) ---
+function gameLoop(timestamp) {
+    if (!lastTime) lastTime = timestamp;
+    const dt = Math.min((timestamp - lastTime) / 1000, 0.1);
+    lastTime = timestamp;
+
+    update(dt);
+    draw();
+    requestAnimationFrame(gameLoop);
+}
+
+requestAnimationFrame(gameLoop);
+</script>
 </body>
 </html>
