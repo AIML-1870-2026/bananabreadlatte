@@ -1,0 +1,809 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>🍬 RGB Candy Machine</title>
+<link href="https://fonts.googleapis.com/css2?family=Fredoka+One&family=Nunito:wght@400;600;700;800&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --pink: #ffb3d1;
+    --lavender: #d4b8f0;
+    --mint: #b8f0d4;
+    --cream: #fff8f0;
+    --soft-white: #fffcfa;
+    --red-pastel: #ffcdd2;
+    --green-pastel: #c8e6c9;
+    --blue-pastel: #bbdefb;
+    --text: #5a4a5a;
+    --text-light: #9a8a9a;
+    --shadow: 0 8px 32px rgba(180,130,180,0.15);
+    --radius: 24px;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: 'Nunito', sans-serif;
+    background: var(--soft-white);
+    color: var(--text);
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* Pastel background pattern */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background:
+      radial-gradient(ellipse at 10% 20%, #ffe0ee 0%, transparent 50%),
+      radial-gradient(ellipse at 90% 10%, #e8d5ff 0%, transparent 50%),
+      radial-gradient(ellipse at 50% 90%, #d5f0e8 0%, transparent 50%),
+      radial-gradient(ellipse at 80% 70%, #ffecd5 0%, transparent 40%);
+    z-index: -1;
+  }
+
+  /* Floating candy dots pattern */
+  body::after {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image: radial-gradient(circle, rgba(255,179,209,0.3) 2px, transparent 2px),
+                      radial-gradient(circle, rgba(212,184,240,0.3) 2px, transparent 2px);
+    background-size: 40px 40px, 60px 60px;
+    background-position: 0 0, 20px 20px;
+    z-index: -1;
+  }
+
+  header {
+    text-align: center;
+    padding: 48px 24px 24px;
+  }
+
+  header h1 {
+    font-family: 'Fredoka One', cursive;
+    font-size: clamp(2.5rem, 6vw, 4rem);
+    background: linear-gradient(135deg, #ff7eb3, #a855f7, #38bdf8);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    margin-bottom: 8px;
+    letter-spacing: 1px;
+  }
+
+  header p {
+    color: var(--text-light);
+    font-size: 1.1rem;
+    font-weight: 600;
+  }
+
+  section {
+    max-width: 900px;
+    margin: 0 auto 60px;
+    padding: 0 24px;
+  }
+
+  .section-title {
+    font-family: 'Fredoka One', cursive;
+    font-size: 1.8rem;
+    margin-bottom: 24px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    color: var(--text);
+  }
+
+  /* ===== CANDY MACHINE ===== */
+  .machine-wrapper {
+    background: rgba(255,255,255,0.7);
+    backdrop-filter: blur(20px);
+    border-radius: var(--radius);
+    padding: 40px 32px;
+    box-shadow: var(--shadow), inset 0 1px 0 rgba(255,255,255,0.9);
+    border: 2px solid rgba(255,255,255,0.8);
+  }
+
+  .dispensers {
+    display: flex;
+    justify-content: center;
+    gap: 32px;
+    margin-bottom: 40px;
+    flex-wrap: wrap;
+  }
+
+  .dispenser {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 12px;
+    width: 160px;
+  }
+
+  .dispenser-label {
+    font-family: 'Fredoka One', cursive;
+    font-size: 1.1rem;
+    letter-spacing: 1px;
+  }
+
+  .dispenser-body {
+    position: relative;
+    width: 90px;
+    height: 160px;
+    border-radius: 16px 16px 8px 8px;
+    overflow: hidden;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.1), inset 0 2px 4px rgba(255,255,255,0.6);
+    cursor: pointer;
+  }
+
+  .dispenser-bg {
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+  }
+
+  .dispenser-fill {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    transition: height 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
+    border-radius: 0 0 8px 8px;
+  }
+
+  .dispenser-glass {
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    border: 3px solid rgba(255,255,255,0.7);
+    background: linear-gradient(135deg, rgba(255,255,255,0.4) 0%, transparent 60%);
+    pointer-events: none;
+  }
+
+  .dispenser-nozzle {
+    width: 24px;
+    height: 16px;
+    border-radius: 0 0 8px 8px;
+    margin-top: -2px;
+    position: relative;
+  }
+
+  .dispenser-value {
+    font-family: 'Fredoka One', cursive;
+    font-size: 1.5rem;
+  }
+
+  /* Sliders */
+  .slider-container {
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+
+  .slider-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .slider-row span {
+    font-weight: 800;
+    font-size: 0.85rem;
+    width: 20px;
+    text-align: center;
+  }
+
+  input[type=range] {
+    -webkit-appearance: none;
+    width: 100%;
+    height: 10px;
+    border-radius: 999px;
+    outline: none;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+
+  input[type=range]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    width: 22px;
+    height: 22px;
+    border-radius: 50%;
+    background: white;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+    cursor: pointer;
+    transition: transform 0.2s;
+  }
+
+  input[type=range]::-webkit-slider-thumb:hover {
+    transform: scale(1.2);
+  }
+
+  .slider-r { background: linear-gradient(to right, #ffe0e0, #ff4444); }
+  .slider-g { background: linear-gradient(to right, #e0ffe0, #44cc44); }
+  .slider-b { background: linear-gradient(to right, #e0e0ff, #4444ff); }
+
+  /* ===== BOWL ===== */
+  .bowl-area {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 16px;
+    position: relative;
+  }
+
+  #candy-particles {
+    position: absolute;
+    top: -60px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 400px;
+    height: 100px;
+    pointer-events: none;
+    overflow: visible;
+  }
+
+  .bowl-outer {
+    width: 200px;
+    height: 120px;
+    position: relative;
+  }
+
+  .bowl-svg {
+    width: 100%;
+    height: 100%;
+    filter: drop-shadow(0 8px 24px rgba(0,0,0,0.12));
+  }
+
+  #bowl-fill {
+    transition: fill 0.4s ease, stop-color 0.4s ease;
+  }
+
+  .bowl-color-info {
+    text-align: center;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+
+  .hex-display {
+    font-family: 'Fredoka One', cursive;
+    font-size: 1.6rem;
+    cursor: pointer;
+    padding: 8px 20px;
+    border-radius: 999px;
+    background: rgba(255,255,255,0.8);
+    border: 2px solid rgba(255,255,255,0.9);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+    transition: transform 0.2s, box-shadow 0.2s;
+    position: relative;
+    display: inline-block;
+  }
+
+  .hex-display:hover {
+    transform: scale(1.05);
+    box-shadow: 0 6px 20px rgba(0,0,0,0.15);
+  }
+
+  .hex-display::after {
+    content: '📋 click to copy';
+    position: absolute;
+    bottom: -28px;
+    left: 50%;
+    transform: translateX(-50%);
+    font-size: 0.7rem;
+    font-family: 'Nunito', sans-serif;
+    color: var(--text-light);
+    white-space: nowrap;
+    font-weight: 600;
+  }
+
+  .rgb-display {
+    font-size: 0.9rem;
+    color: var(--text-light);
+    font-weight: 700;
+    margin-top: 8px;
+  }
+
+  .copy-toast {
+    position: fixed;
+    bottom: 32px;
+    left: 50%;
+    transform: translateX(-50%) translateY(80px);
+    background: var(--text);
+    color: white;
+    padding: 12px 24px;
+    border-radius: 999px;
+    font-weight: 700;
+    font-size: 0.9rem;
+    transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+    z-index: 999;
+    pointer-events: none;
+  }
+
+  .copy-toast.show {
+    transform: translateX(-50%) translateY(0);
+  }
+
+  /* ===== PALETTE ===== */
+  .palette-grid {
+    display: flex;
+    gap: 16px;
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+
+  .swatch-card {
+    border-radius: 20px;
+    overflow: hidden;
+    box-shadow: var(--shadow);
+    width: 130px;
+    cursor: pointer;
+    transition: transform 0.2s, box-shadow 0.2s;
+    background: white;
+    border: 2px solid rgba(255,255,255,0.9);
+  }
+
+  .swatch-card:hover {
+    transform: translateY(-6px) scale(1.04);
+    box-shadow: 0 16px 40px rgba(180,130,180,0.25);
+  }
+
+  .swatch-color {
+    height: 90px;
+    transition: background-color 0.4s ease;
+  }
+
+  .swatch-info {
+    padding: 8px 10px;
+    text-align: center;
+  }
+
+  .swatch-hex {
+    font-family: 'Fredoka One', cursive;
+    font-size: 0.85rem;
+    color: var(--text);
+    display: block;
+  }
+
+  .swatch-name {
+    font-size: 0.7rem;
+    color: var(--text-light);
+    font-weight: 700;
+    display: block;
+    margin-top: 2px;
+  }
+
+  /* ===== COLOR BLINDNESS ===== */
+  .sim-panels {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 20px;
+  }
+
+  @media (max-width: 600px) {
+    .sim-panels { grid-template-columns: 1fr; }
+    .dispensers { gap: 16px; }
+    .dispenser { width: 130px; }
+  }
+
+  .sim-panel {
+    background: rgba(255,255,255,0.7);
+    backdrop-filter: blur(20px);
+    border-radius: var(--radius);
+    padding: 24px;
+    box-shadow: var(--shadow);
+    border: 2px solid rgba(255,255,255,0.8);
+  }
+
+  .sim-panel h3 {
+    font-family: 'Fredoka One', cursive;
+    font-size: 1.2rem;
+    margin-bottom: 6px;
+    color: var(--text);
+  }
+
+  .sim-panel p {
+    font-size: 0.8rem;
+    color: var(--text-light);
+    font-weight: 600;
+    margin-bottom: 16px;
+    line-height: 1.4;
+  }
+
+  .sim-color-preview {
+    width: 100%;
+    height: 70px;
+    border-radius: 16px;
+    margin-bottom: 12px;
+    transition: background-color 0.4s;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+  }
+
+  .sim-swatches {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+  }
+
+  .sim-swatch {
+    flex: 1;
+    min-width: 40px;
+    height: 44px;
+    border-radius: 12px;
+    transition: background-color 0.4s;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+  }
+
+  /* Candy animation */
+  @keyframes candyFall {
+    0% { transform: translateY(0) rotate(0deg); opacity: 1; }
+    100% { transform: translateY(80px) rotate(360deg); opacity: 0; }
+  }
+
+  .candy-piece {
+    position: absolute;
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    animation: candyFall 0.6s ease-in forwards;
+    pointer-events: none;
+  }
+
+  /* Bounce on load */
+  @keyframes bounceIn {
+    0% { transform: scale(0.8) translateY(20px); opacity: 0; }
+    60% { transform: scale(1.05); opacity: 1; }
+    100% { transform: scale(1) translateY(0); opacity: 1; }
+  }
+
+  .machine-wrapper { animation: bounceIn 0.7s cubic-bezier(0.34, 1.56, 0.64, 1) both; }
+  section:nth-child(3) .machine-wrapper, section:nth-child(3) { animation-delay: 0.1s; }
+
+  footer {
+    text-align: center;
+    padding: 32px;
+    color: var(--text-light);
+    font-size: 0.85rem;
+    font-weight: 600;
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>🍬 RGB Candy Machine</h1>
+  <p>Mix colors like a candy chef — pour R, G, B to blend your perfect hue!</p>
+</header>
+
+<!-- SECTION 1: CANDY MACHINE -->
+<section>
+  <div class="section-title">🏭 The Candy Machine</div>
+  <div class="machine-wrapper">
+    <div class="dispensers">
+
+      <!-- RED dispenser -->
+      <div class="dispenser" id="disp-r">
+        <div class="dispenser-label" style="color:#e05080">🍓 Red</div>
+        <div class="dispenser-body" style="border: 3px solid #ffb3c6;">
+          <div class="dispenser-bg" style="background: linear-gradient(180deg, #ffe0e8 0%, #ffb3c6 100%);"></div>
+          <div class="dispenser-fill" id="fill-r" style="background: linear-gradient(180deg, #ff8fab, #e63c5e); height: 50%;"></div>
+          <div class="dispenser-glass"></div>
+        </div>
+        <div class="dispenser-nozzle" style="background: #ffb3c6;"></div>
+        <div class="dispenser-value" id="val-r" style="color:#e05080">128</div>
+        <div class="slider-container">
+          <div class="slider-row">
+            <span style="color:#e05080">R</span>
+            <input type="range" class="slider-r" id="slider-r" min="0" max="255" value="128">
+          </div>
+        </div>
+      </div>
+
+      <!-- GREEN dispenser -->
+      <div class="dispenser" id="disp-g">
+        <div class="dispenser-label" style="color:#3da85e">🍈 Green</div>
+        <div class="dispenser-body" style="border: 3px solid #b3f0c8;">
+          <div class="dispenser-bg" style="background: linear-gradient(180deg, #e0ffe8 0%, #b3f0c8 100%);"></div>
+          <div class="dispenser-fill" id="fill-g" style="background: linear-gradient(180deg, #70e090, #2da84e); height: 50%;"></div>
+          <div class="dispenser-glass"></div>
+        </div>
+        <div class="dispenser-nozzle" style="background: #b3f0c8;"></div>
+        <div class="dispenser-value" id="val-g" style="color:#3da85e">128</div>
+        <div class="slider-container">
+          <div class="slider-row">
+            <span style="color:#3da85e">G</span>
+            <input type="range" class="slider-g" id="slider-g" min="0" max="255" value="128">
+          </div>
+        </div>
+      </div>
+
+      <!-- BLUE dispenser -->
+      <div class="dispenser" id="disp-b">
+        <div class="dispenser-label" style="color:#3a7bd5">🫐 Blue</div>
+        <div class="dispenser-body" style="border: 3px solid #b3d4ff;">
+          <div class="dispenser-bg" style="background: linear-gradient(180deg, #e0eeff 0%, #b3d4ff 100%);"></div>
+          <div class="dispenser-fill" id="fill-b" style="background: linear-gradient(180deg, #7ab0ff, #2a5bd5); height: 50%;"></div>
+          <div class="dispenser-glass"></div>
+        </div>
+        <div class="dispenser-nozzle" style="background: #b3d4ff;"></div>
+        <div class="dispenser-value" id="val-b" style="color:#3a7bd5">128</div>
+        <div class="slider-container">
+          <div class="slider-row">
+            <span style="color:#3a7bd5">B</span>
+            <input type="range" class="slider-b" id="slider-b" min="0" max="255" value="128">
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Bowl -->
+    <div class="bowl-area">
+      <div id="candy-particles"></div>
+      <div class="bowl-outer">
+        <svg class="bowl-svg" viewBox="0 0 200 120" xmlns="http://www.w3.org/2000/svg">
+          <defs>
+            <linearGradient id="bowlGrad" x1="0" y1="0" x2="0" y2="1">
+              <stop id="bowl-fill" offset="0%" stop-color="#808080"/>
+              <stop offset="100%" stop-color="#404040"/>
+            </linearGradient>
+            <filter id="glow">
+              <feGaussianBlur stdDeviation="3" result="blur"/>
+              <feComposite in="SourceGraphic" in2="blur" operator="over"/>
+            </filter>
+          </defs>
+          <!-- Bowl shape -->
+          <ellipse cx="100" cy="48" rx="88" ry="22" fill="rgba(255,255,255,0.3)"/>
+          <path d="M12 48 Q12 110 100 112 Q188 110 188 48 Z" fill="url(#bowlGrad)" filter="url(#glow)"/>
+          <path d="M12 48 Q12 110 100 112 Q188 110 188 48 Z" fill="rgba(255,255,255,0.15)"/>
+          <!-- Bowl rim -->
+          <ellipse cx="100" cy="48" rx="88" ry="22" fill="none" stroke="rgba(255,255,255,0.6)" stroke-width="3"/>
+          <!-- Shine -->
+          <ellipse cx="68" cy="42" rx="20" ry="8" fill="rgba(255,255,255,0.3)" transform="rotate(-15,68,42)"/>
+        </svg>
+      </div>
+      <div class="bowl-color-info">
+        <div class="hex-display" id="hex-display" onclick="copyHex()">#808080</div>
+        <div class="rgb-display" id="rgb-display">rgb(128, 128, 128)</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- SECTION 2: PALETTE -->
+<section>
+  <div class="section-title">🎨 Your Palette</div>
+  <div class="machine-wrapper">
+    <div class="palette-grid" id="palette-grid"></div>
+  </div>
+</section>
+
+<!-- SECTION 3: COLOR BLINDNESS -->
+<section>
+  <div class="section-title">👁️ Color Vision Simulator</div>
+  <div class="sim-panels">
+    <div class="sim-panel">
+      <h3>🔴 Protanopia View</h3>
+      <p>Red-blind — difficulty distinguishing red and green. Affects ~1% of males.</p>
+      <div class="sim-color-preview" id="sim-proto-main"></div>
+      <div class="sim-swatches" id="sim-proto-swatches"></div>
+    </div>
+    <div class="sim-panel">
+      <h3>🟢 Deuteranopia View</h3>
+      <p>Green-blind — the most common form of color blindness. Affects ~6% of males.</p>
+      <div class="sim-color-preview" id="sim-deut-main"></div>
+      <div class="sim-swatches" id="sim-deut-swatches"></div>
+    </div>
+  </div>
+</section>
+
+<div class="copy-toast" id="copy-toast">✅ Hex copied!</div>
+
+<footer>🍬 Made with sugar, light, and RGB • Your candy color studio</footer>
+
+<script>
+  let r = 128, g = 128, b = 128;
+
+  // ===== COLOR CONVERSION =====
+  function toHex(val) { return val.toString(16).padStart(2, '0').toUpperCase(); }
+  function rgbToHex(r, g, b) { return `#${toHex(r)}${toHex(g)}${toHex(b)}`; }
+
+  function rgbToHsl(r, g, b) {
+    r /= 255; g /= 255; b /= 255;
+    const max = Math.max(r,g,b), min = Math.min(r,g,b);
+    let h, s, l = (max+min)/2;
+    if (max === min) { h = s = 0; }
+    else {
+      const d = max - min;
+      s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
+      switch(max) {
+        case r: h = ((g-b)/d + (g<b?6:0))/6; break;
+        case g: h = ((b-r)/d + 2)/6; break;
+        case b: h = ((r-g)/d + 4)/6; break;
+      }
+    }
+    return [h*360, s*100, l*100];
+  }
+
+  function hslToRgb(h, s, l) {
+    h /= 360; s /= 100; l /= 100;
+    let r, g, b;
+    if (s === 0) { r = g = b = l; }
+    else {
+      const hue2rgb = (p, q, t) => {
+        if (t < 0) t += 1; if (t > 1) t -= 1;
+        if (t < 1/6) return p + (q-p)*6*t;
+        if (t < 1/2) return q;
+        if (t < 2/3) return p + (q-p)*(2/3-t)*6;
+        return p;
+      };
+      const q = l < 0.5 ? l*(1+s) : l+s-l*s;
+      const p = 2*l - q;
+      r = hue2rgb(p, q, h + 1/3);
+      g = hue2rgb(p, q, h);
+      b = hue2rgb(p, q, h - 1/3);
+    }
+    return [Math.round(r*255), Math.round(g*255), Math.round(b*255)];
+  }
+
+  // ===== PALETTE GENERATION =====
+  function generatePalette(r, g, b) {
+    const [h, s, l] = rgbToHsl(r, g, b);
+    const complementH = (h + 180) % 360;
+    return [
+      { rgb: [r, g, b], name: 'Base' },
+      { rgb: hslToRgb(complementH, s, l), name: 'Complement' },
+      { rgb: hslToRgb(h, Math.min(100, s+15), Math.min(90, l+20)), name: 'Light Tint' },
+      { rgb: hslToRgb(complementH, Math.min(100, s+10), Math.min(90, l+15)), name: 'Comp Tint' },
+      { rgb: hslToRgb((h+30)%360, s, l), name: 'Warm Shift' },
+    ];
+  }
+
+  // ===== COLOR BLINDNESS SIMULATION =====
+  function simulateProtanopia(r, g, b) {
+    const rr = 0.567*r + 0.433*g + 0.000*b;
+    const gr = 0.558*r + 0.442*g + 0.000*b;
+    const br = 0.000*r + 0.242*g + 0.758*b;
+    return [Math.round(rr), Math.round(gr), Math.round(br)];
+  }
+
+  function simulateDeuteranopia(r, g, b) {
+    const rr = 0.625*r + 0.375*g + 0.000*b;
+    const gr = 0.700*r + 0.300*g + 0.000*b;
+    const br = 0.000*r + 0.300*g + 0.700*b;
+    return [Math.round(rr), Math.round(gr), Math.round(br)];
+  }
+
+  // ===== CANDY PARTICLES =====
+  function spawnCandies(color) {
+    const container = document.getElementById('candy-particles');
+    for (let i = 0; i < 6; i++) {
+      const candy = document.createElement('div');
+      candy.className = 'candy-piece';
+      candy.style.background = color;
+      candy.style.left = (80 + Math.random() * 240) + 'px';
+      candy.style.top = (Math.random() * 20) + 'px';
+      candy.style.animationDelay = (Math.random() * 0.3) + 's';
+      candy.style.width = (6 + Math.random() * 8) + 'px';
+      candy.style.height = candy.style.width;
+      container.appendChild(candy);
+      setTimeout(() => candy.remove(), 900);
+    }
+  }
+
+  // ===== UPDATE UI =====
+  function update() {
+    const hex = rgbToHex(r, g, b);
+
+    // Bowl fill color
+    document.querySelector('#bowl-fill').setAttribute('stop-color', hex);
+    document.querySelector('stop[offset="100%"]').setAttribute('stop-color', rgbToHex(
+      Math.max(0, r-60), Math.max(0, g-60), Math.max(0, b-60)
+    ));
+
+    // Hex display
+    const hexEl = document.getElementById('hex-display');
+    hexEl.textContent = hex;
+    hexEl.style.color = getLuminance(r,g,b) > 140 ? '#333' : '#fff';
+    hexEl.style.background = hex;
+    hexEl.style.borderColor = 'rgba(255,255,255,0.6)';
+
+    document.getElementById('rgb-display').textContent = `rgb(${r}, ${g}, ${b})`;
+
+    // Dispenser fills
+    document.getElementById('fill-r').style.height = (r/255*100) + '%';
+    document.getElementById('fill-g').style.height = (g/255*100) + '%';
+    document.getElementById('fill-b').style.height = (b/255*100) + '%';
+
+    // Values
+    document.getElementById('val-r').textContent = r;
+    document.getElementById('val-g').textContent = g;
+    document.getElementById('val-b').textContent = b;
+
+    // Particles
+    spawnCandies(hex);
+
+    // Palette
+    const palette = generatePalette(r, g, b);
+    const grid = document.getElementById('palette-grid');
+    grid.innerHTML = '';
+    palette.forEach(swatch => {
+      const [sr, sg, sb] = swatch.rgb;
+      const sh = rgbToHex(sr, sg, sb);
+      const card = document.createElement('div');
+      card.className = 'swatch-card';
+      card.title = 'Click to copy ' + sh;
+      card.innerHTML = `
+        <div class="swatch-color" style="background:${sh}"></div>
+        <div class="swatch-info">
+          <span class="swatch-hex">${sh}</span>
+          <span class="swatch-name">${swatch.name}</span>
+        </div>`;
+      card.onclick = () => copyText(sh);
+      grid.appendChild(card);
+    });
+
+    // Color blindness sim
+    const proto = simulateProtanopia(r, g, b);
+    const deut = simulateDeuteranopia(r, g, b);
+    document.getElementById('sim-proto-main').style.background = rgbToHex(...proto);
+    document.getElementById('sim-deut-main').style.background = rgbToHex(...deut);
+
+    const protoSwatches = document.getElementById('sim-proto-swatches');
+    const deutSwatches = document.getElementById('sim-deut-swatches');
+    protoSwatches.innerHTML = '';
+    deutSwatches.innerHTML = '';
+
+    palette.forEach(swatch => {
+      const [sr, sg, sb] = swatch.rgb;
+      const ps = simulateProtanopia(sr, sg, sb);
+      const ds = simulateDeuteranopia(sr, sg, sb);
+
+      const pd = document.createElement('div');
+      pd.className = 'sim-swatch';
+      pd.style.background = rgbToHex(...ps);
+      protoSwatches.appendChild(pd);
+
+      const dd = document.createElement('div');
+      dd.className = 'sim-swatch';
+      dd.style.background = rgbToHex(...ds);
+      deutSwatches.appendChild(dd);
+    });
+  }
+
+  function getLuminance(r, g, b) {
+    return 0.299*r + 0.587*g + 0.114*b;
+  }
+
+  // ===== COPY =====
+  function copyText(text) {
+    navigator.clipboard.writeText(text).catch(() => {});
+    const toast = document.getElementById('copy-toast');
+    toast.textContent = `✅ ${text} copied!`;
+    toast.classList.add('show');
+    setTimeout(() => toast.classList.remove('show'), 2000);
+  }
+
+  function copyHex() {
+    copyText(rgbToHex(r, g, b));
+  }
+
+  // ===== SLIDERS =====
+  document.getElementById('slider-r').addEventListener('input', e => {
+    r = parseInt(e.target.value);
+    update();
+  });
+  document.getElementById('slider-g').addEventListener('input', e => {
+    g = parseInt(e.target.value);
+    update();
+  });
+  document.getElementById('slider-b').addEventListener('input', e => {
+    b = parseInt(e.target.value);
+    update();
+  });
+
+  // Initial render
+  update();
+</script>
+</body>
+</html>
