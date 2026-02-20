@@ -1,0 +1,852 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Turing Patterns Explorer</title>
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Roboto+Mono:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+:root {
+  --bg-dark: #0a0e17;
+  --bg-panel: #141821;
+  --bg-control: #1a1f2e;
+  --border: #2a3142;
+  --accent-primary: #ff69b4;
+  --accent-secondary: #00ff88;
+  --accent-dim: #ff9ec7;
+  --text: #e0e6f0;
+  --text-dim: #8892a6;
+  --warning: #ff6b35;
+  --success: #00ff88;
+}
+
+body {
+  background: var(--bg-dark);
+  color: var(--text);
+  font-family: 'Roboto Mono', monospace;
+  height: 100vh;
+  overflow: hidden;
+}
+
+/* ─── Layout ─── */
+.container {
+  display: grid;
+  grid-template-columns: 320px 1fr;
+  height: 100vh;
+}
+
+/* ─── Sidebar ─── */
+.sidebar {
+  background: var(--bg-panel);
+  border-right: 1px solid var(--border);
+  overflow-y: auto;
+  padding: 16px;
+}
+.sidebar::-webkit-scrollbar { width: 5px; }
+.sidebar::-webkit-scrollbar-track { background: var(--bg-dark); }
+.sidebar::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+
+.sidebar-header {
+  text-align: center;
+  margin-bottom: 18px;
+  padding-bottom: 14px;
+  border-bottom: 1px solid var(--border);
+}
+.sidebar-header h1 {
+  font-family: 'Orbitron', sans-serif;
+  font-weight: 900;
+  font-size: 19px;
+  text-transform: uppercase;
+  letter-spacing: 4px;
+  background: linear-gradient(135deg, var(--accent-primary), var(--accent-secondary));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  text-shadow: 0 0 20px rgba(255, 105, 180, 0.3);
+}
+.sidebar-header p {
+  font-size: 9px;
+  color: var(--text-dim);
+  margin-top: 5px;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+}
+
+/* ─── Sections ─── */
+.section {
+  background: var(--bg-control);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 12px 14px;
+  margin-bottom: 10px;
+}
+.section-title {
+  font-family: 'Orbitron', sans-serif;
+  font-weight: 700;
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 2px;
+  color: var(--accent-primary);
+  margin-bottom: 10px;
+  padding-bottom: 6px;
+  border-bottom: 1px solid var(--border);
+}
+
+/* ─── Sliders ─── */
+.sg { margin-bottom: 9px; }
+.sg:last-child { margin-bottom: 0; }
+.sg-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 2px; }
+.sg-label { font-size: 12px; color: var(--text); }
+.sg-val { font-family: 'Orbitron', sans-serif; font-size: 11px; color: var(--accent-primary); font-weight: 700; }
+.sg-tip { font-size: 9px; color: var(--text-dim); margin-bottom: 3px; }
+
+input[type="range"] {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 100%;
+  height: 3px;
+  background: var(--border);
+  border-radius: 2px;
+  outline: none;
+}
+input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 14px; height: 14px;
+  background: var(--accent-primary);
+  border-radius: 50%;
+  cursor: pointer;
+  box-shadow: 0 0 6px rgba(255, 105, 180, 0.5);
+  transition: box-shadow .2s, transform .2s;
+}
+input[type="range"]::-webkit-slider-thumb:hover {
+  box-shadow: 0 0 12px rgba(255, 105, 180, 0.8);
+  transform: scale(1.2);
+}
+input[type="range"]::-moz-range-thumb {
+  width: 14px; height: 14px;
+  background: var(--accent-primary);
+  border: none;
+  border-radius: 50%;
+  cursor: pointer;
+  box-shadow: 0 0 6px rgba(255, 105, 180, 0.5);
+}
+
+/* ─── Presets ─── */
+.preset-row { display: flex; gap: 6px; flex-wrap: wrap; }
+.preset-btn {
+  flex: 1;
+  min-width: 85px;
+  background: var(--bg-dark);
+  border: 1px solid var(--border);
+  color: var(--text-dim);
+  font-family: 'Roboto Mono', monospace;
+  font-size: 11px;
+  padding: 8px 2px;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all .3s;
+}
+.preset-btn:hover {
+  border-color: var(--accent-primary);
+  color: var(--accent-primary);
+  box-shadow: 0 0 8px rgba(255, 105, 180, 0.25);
+  transform: translateY(-1px);
+}
+.preset-btn.active {
+  background: linear-gradient(135deg, rgba(255, 105, 180, 0.15), rgba(0, 255, 136, 0.15));
+  border-color: var(--accent-primary);
+  color: var(--accent-primary);
+  box-shadow: 0 0 12px rgba(255, 105, 180, 0.4);
+}
+
+/* ─── Control Buttons ─── */
+.ctrl-row { display: flex; gap: 6px; }
+.ctrl-btn {
+  flex: 1;
+  background: var(--bg-dark);
+  border: 1px solid var(--border);
+  color: var(--text);
+  font-family: 'Roboto Mono', monospace;
+  font-size: 12px;
+  padding: 10px;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all .3s;
+}
+.ctrl-btn:hover {
+  border-color: var(--accent-secondary);
+  color: var(--accent-secondary);
+  box-shadow: 0 0 8px rgba(0, 255, 136, 0.25);
+  transform: translateY(-1px);
+}
+.ctrl-btn.btn-pause { border-color: var(--accent-primary); color: var(--accent-primary); }
+.ctrl-btn.btn-pause:hover { box-shadow: 0 0 8px rgba(255, 105, 180, 0.4); }
+.ctrl-btn.btn-reset { border-color: var(--warning); color: var(--warning); }
+.ctrl-btn.btn-reset:hover { box-shadow: 0 0 8px rgba(255, 107, 53, 0.4); }
+.btn-export {
+  width: 100%;
+  background: linear-gradient(135deg, rgba(255, 105, 180, 0.2), rgba(0, 255, 136, 0.2));
+  border-color: var(--accent-secondary);
+  color: var(--accent-secondary);
+}
+.btn-export:hover {
+  box-shadow: 0 0 12px rgba(0, 255, 136, 0.4);
+}
+
+/* ─── Canvas Area ─── */
+.canvas-area {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--bg-dark);
+  overflow: hidden;
+}
+
+canvas {
+  display: block;
+  border: 2px solid var(--border);
+  border-radius: 4px;
+  box-shadow: 0 0 30px rgba(255, 105, 180, 0.2), 0 0 60px rgba(0, 255, 136, 0.1);
+  max-width: 95%;
+  max-height: 95%;
+  cursor: crosshair;
+}
+
+/* ─── Stats Overlay ─── */
+.stats-overlay {
+  position: absolute;
+  top: 20px;
+  right: 20px;
+  background: rgba(20, 24, 33, 0.9);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 12px;
+  font-family: 'Orbitron', sans-serif;
+  font-size: 11px;
+  backdrop-filter: blur(10px);
+  box-shadow: 0 0 20px rgba(0, 0, 0, 0.5);
+}
+.stat-item {
+  display: flex;
+  justify-content: space-between;
+  gap: 15px;
+  margin-bottom: 6px;
+}
+.stat-item:last-child { margin-bottom: 0; }
+.stat-label { color: var(--text-dim); }
+.stat-value { color: var(--accent-primary); font-weight: 700; }
+
+/* ─── Instructions ─── */
+.instructions {
+  position: absolute;
+  bottom: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(20, 24, 33, 0.9);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 10px 20px;
+  font-size: 11px;
+  color: var(--text-dim);
+  backdrop-filter: blur(10px);
+  text-align: center;
+}
+</style>
+</head>
+<body>
+<div class="container">
+  <!-- Sidebar -->
+  <div class="sidebar">
+    <div class="sidebar-header">
+      <h1>Turing Patterns</h1>
+      <p>Reaction-Diffusion Explorer</p>
+    </div>
+
+    <!-- Pattern Presets -->
+    <div class="section">
+      <div class="section-title">Pattern Presets</div>
+      <div class="preset-row">
+        <button class="preset-btn active" id="btnLeopard">Leopard Spots</button>
+        <button class="preset-btn" id="btnZebra">Zebra Stripes</button>
+        <button class="preset-btn" id="btnMitosis">Mitosis</button>
+      </div>
+    </div>
+
+    <!-- Reaction Parameters -->
+    <div class="section">
+      <div class="section-title">Reaction Parameters</div>
+      <div class="sg">
+        <div class="sg-head">
+          <span class="sg-label">Feed Rate (f)</span>
+          <span class="sg-val" id="valF">0.055</span>
+        </div>
+        <div class="sg-tip">Chemical U injection rate</div>
+        <input type="range" id="slF" min="0.010" max="0.100" step="0.001" value="0.055">
+      </div>
+      <div class="sg">
+        <div class="sg-head">
+          <span class="sg-label">Kill Rate (k)</span>
+          <span class="sg-val" id="valK">0.062</span>
+        </div>
+        <div class="sg-tip">Chemical V removal rate</div>
+        <input type="range" id="slK" min="0.030" max="0.070" step="0.001" value="0.062">
+      </div>
+    </div>
+
+    <!-- Diffusion Rates -->
+    <div class="section">
+      <div class="section-title">Diffusion Rates</div>
+      <div class="sg">
+        <div class="sg-head">
+          <span class="sg-label">Diffusion U (Du)</span>
+          <span class="sg-val" id="valDu">0.20</span>
+        </div>
+        <div class="sg-tip">Green chemical spread rate</div>
+        <input type="range" id="slDu" min="0.10" max="0.30" step="0.01" value="0.20">
+      </div>
+      <div class="sg">
+        <div class="sg-head">
+          <span class="sg-label">Diffusion V (Dv)</span>
+          <span class="sg-val" id="valDv">0.10</span>
+        </div>
+        <div class="sg-tip">Pink chemical spread rate</div>
+        <input type="range" id="slDv" min="0.01" max="0.15" step="0.01" value="0.10">
+      </div>
+    </div>
+
+    <!-- Simulation -->
+    <div class="section">
+      <div class="section-title">Simulation</div>
+      <div class="sg">
+        <div class="sg-head">
+          <span class="sg-label">Speed</span>
+          <span class="sg-val" id="valSpeed">1.0x</span>
+        </div>
+        <div class="sg-tip">Simulation speed multiplier</div>
+        <input type="range" id="slSpeed" min="0.5" max="2.0" step="0.1" value="1.0">
+      </div>
+    </div>
+
+    <!-- Interaction Tools -->
+    <div class="section">
+      <div class="section-title">Interaction Tools</div>
+      <div class="sg">
+        <div class="sg-head">
+          <span class="sg-label">Brush Size</span>
+          <span class="sg-val" id="valBrush">20px</span>
+        </div>
+        <div class="sg-tip">Click or drag to disturb</div>
+        <input type="range" id="slBrush" min="5" max="50" step="1" value="20">
+      </div>
+    </div>
+
+    <!-- Controls -->
+    <div class="section">
+      <div class="section-title">Controls</div>
+      <div class="ctrl-row">
+        <button class="ctrl-btn btn-pause" id="btnPause">⏸ Pause</button>
+        <button class="ctrl-btn btn-reset" id="btnReset">↺ Reset</button>
+      </div>
+    </div>
+
+    <!-- Export -->
+    <div class="section">
+      <div class="section-title">Export</div>
+      <button class="ctrl-btn btn-export" id="btnExport">📥 Save PNG</button>
+    </div>
+  </div>
+
+  <!-- Canvas Area -->
+  <div class="canvas-area">
+    <canvas id="canvas" width="600" height="600"></canvas>
+
+    <!-- Stats Overlay -->
+    <div class="stats-overlay">
+      <div class="stat-item">
+        <div class="stat-label">FPS</div>
+        <div class="stat-value" id="sFps">60</div>
+      </div>
+      <div class="stat-item">
+        <div class="stat-label">Pattern</div>
+        <div class="stat-value" id="sPattern">Leopard Spots</div>
+      </div>
+      <div class="stat-item">
+        <div class="stat-label">U Avg</div>
+        <div class="stat-value" id="sUAvg">0.50</div>
+      </div>
+      <div class="stat-item">
+        <div class="stat-label">V Avg</div>
+        <div class="stat-value" id="sVAvg">0.25</div>
+      </div>
+    </div>
+
+    <!-- Instructions -->
+    <div class="instructions">
+      Click or drag on canvas to disturb pattern • Adjust parameters to explore new patterns
+    </div>
+  </div>
+</div>
+
+<script>
+// ═══════════════════════════════════════════════════════
+// CANVAS SETUP
+// ═══════════════════════════════════════════════════════
+const canvas = document.getElementById('canvas');
+const ctx = canvas.getContext('2d', { willReadFrequently: true });
+
+// Set canvas to square aspect ratio
+function resizeCanvas() {
+  const containerWidth = canvas.parentElement.clientWidth;
+  const containerHeight = canvas.parentElement.clientHeight;
+  const size = Math.min(containerWidth, containerHeight) * 0.9;
+  canvas.style.width = size + 'px';
+  canvas.style.height = size + 'px';
+}
+resizeCanvas();
+window.addEventListener('resize', resizeCanvas);
+
+// ═══════════════════════════════════════════════════════
+// PARAMETERS
+// ═══════════════════════════════════════════════════════
+const P = {
+  f: 0.055,
+  k: 0.062,
+  Du: 0.20,
+  Dv: 0.10,
+  speed: 1.0,
+  brushSize: 20
+};
+
+const PRESETS = {
+  leopardSpots: { name: 'Leopard Spots', f: 0.055, k: 0.062, Du: 0.20, Dv: 0.10 },
+  zebraStripes: { name: 'Zebra Stripes', f: 0.035, k: 0.060, Du: 0.20, Dv: 0.10 },
+  mitosis: { name: 'Mitosis', f: 0.029, k: 0.062, Du: 0.20, Dv: 0.10 }
+};
+
+let currentPreset = 'leopardSpots';
+
+// ═══════════════════════════════════════════════════════
+// GRAY-SCOTT SIMULATION
+// ═══════════════════════════════════════════════════════
+class GrayScottSimulation {
+  constructor(width, height) {
+    this.width = width;
+    this.height = height;
+    this.size = width * height;
+
+    // Use Float32Arrays for performance
+    this.u = new Float32Array(this.size);
+    this.v = new Float32Array(this.size);
+    this.uNext = new Float32Array(this.size);
+    this.vNext = new Float32Array(this.size);
+
+    // Simulation parameters
+    this.f = P.f;
+    this.k = P.k;
+    this.Du = P.Du;
+    this.Dv = P.Dv;
+    this.dt = 0.5;
+
+    this.reset();
+  }
+
+  reset() {
+    // Initialize: U = 1.0 (saturated), V = 0.0 (empty)
+    for (let i = 0; i < this.size; i++) {
+      this.u[i] = 1.0;
+      this.v[i] = 0.0;
+    }
+
+    // Add central disturbance (64x64 square)
+    const centerX = this.width / 2;
+    const centerY = this.height / 2;
+    const disturbSize = 32;
+
+    for (let dy = -disturbSize; dy <= disturbSize; dy++) {
+      for (let dx = -disturbSize; dx <= disturbSize; dx++) {
+        const x = Math.floor(centerX + dx);
+        const y = Math.floor(centerY + dy);
+        if (x >= 0 && x < this.width && y >= 0 && y < this.height) {
+          const i = y * this.width + x;
+          this.v[i] = 1.0;
+          this.u[i] = 0.5;
+        }
+      }
+    }
+
+    // Add random seed disturbances (10-20 scattered points)
+    const numSeeds = 15;
+    for (let s = 0; s < numSeeds; s++) {
+      const seedX = Math.floor(Math.random() * this.width);
+      const seedY = Math.floor(Math.random() * this.height);
+      this.seed(seedX, seedY, 2);
+    }
+  }
+
+  seed(centerX, centerY, radius) {
+    // Add V disturbance at position (for click/brush interaction)
+    for (let dy = -radius; dy <= radius; dy++) {
+      for (let dx = -radius; dx <= radius; dx++) {
+        if (dx * dx + dy * dy <= radius * radius) {
+          const x = (centerX + dx + this.width) % this.width;
+          const y = (centerY + dy + this.height) % this.height;
+          const i = y * this.width + x;
+
+          this.v[i] = 1.0;
+          this.u[i] = 0.5;
+        }
+      }
+    }
+  }
+
+  getLaplacian(grid, x, y) {
+    // 9-point stencil with periodic boundaries
+    const w = this.width;
+    const h = this.height;
+
+    const xm1 = (x - 1 + w) % w;
+    const xp1 = (x + 1) % w;
+    const ym1 = (y - 1 + h) % h;
+    const yp1 = (y + 1) % h;
+
+    const center = grid[y * w + x];
+    const left   = grid[y * w + xm1];
+    const right  = grid[y * w + xp1];
+    const up     = grid[ym1 * w + x];
+    const down   = grid[yp1 * w + x];
+    const ul     = grid[ym1 * w + xm1];
+    const ur     = grid[ym1 * w + xp1];
+    const dl     = grid[yp1 * w + xm1];
+    const dr     = grid[yp1 * w + xp1];
+
+    return 0.20 * (left + right + up + down) +
+           0.05 * (ul + ur + dl + dr) -
+           1.0 * center;
+  }
+
+  update() {
+    // Gray-Scott reaction-diffusion iteration
+    for (let y = 0; y < this.height; y++) {
+      for (let x = 0; x < this.width; x++) {
+        const i = y * this.width + x;
+
+        // Compute Laplacians
+        const lapU = this.getLaplacian(this.u, x, y);
+        const lapV = this.getLaplacian(this.v, x, y);
+
+        // Get current values
+        const u = this.u[i];
+        const v = this.v[i];
+        const uvv = u * v * v;
+
+        // Gray-Scott equations
+        this.uNext[i] = u + (this.Du * lapU - uvv + this.f * (1 - u)) * this.dt;
+        this.vNext[i] = v + (this.Dv * lapV + uvv - (this.f + this.k) * v) * this.dt;
+
+        // Clamp to [0, 1]
+        this.uNext[i] = Math.max(0, Math.min(1, this.uNext[i]));
+        this.vNext[i] = Math.max(0, Math.min(1, this.vNext[i]));
+      }
+    }
+
+    // Swap buffers
+    [this.u, this.uNext] = [this.uNext, this.u];
+    [this.v, this.vNext] = [this.vNext, this.v];
+  }
+
+  setParameters(f, k, Du, Dv) {
+    this.f = f;
+    this.k = k;
+    this.Du = Du;
+    this.Dv = Dv;
+  }
+
+  getAverageU() {
+    let sum = 0;
+    for (let i = 0; i < this.size; i++) sum += this.u[i];
+    return sum / this.size;
+  }
+
+  getAverageV() {
+    let sum = 0;
+    for (let i = 0; i < this.size; i++) sum += this.v[i];
+    return sum / this.size;
+  }
+}
+
+// ═══════════════════════════════════════════════════════
+// RENDERER
+// ═══════════════════════════════════════════════════════
+class Renderer {
+  constructor(canvas) {
+    this.canvas = canvas;
+    this.ctx = canvas.getContext('2d', { willReadFrequently: true });
+    this.imageData = this.ctx.createImageData(canvas.width, canvas.height);
+  }
+
+  render(simulation) {
+    const data = this.imageData.data;
+    const w = simulation.width;
+    const h = simulation.height;
+    const canvasW = this.canvas.width;
+    const canvasH = this.canvas.height;
+
+    // Scale from simulation grid to canvas pixels
+    for (let cy = 0; cy < canvasH; cy++) {
+      for (let cx = 0; cx < canvasW; cx++) {
+        // Map canvas coordinates to simulation grid
+        const sx = Math.floor(cx * w / canvasW);
+        const sy = Math.floor(cy * h / canvasH);
+        const simIdx = sy * w + sx;
+        const pixelIdx = (cy * canvasW + cx) * 4;
+
+        const u = simulation.u[simIdx];
+        const v = simulation.v[simIdx];
+
+        // Color mapping: Pink (V) and Green (U), inverted U for black background
+        data[pixelIdx + 0] = Math.floor(v * 255);          // R (pink)
+        data[pixelIdx + 1] = Math.floor((1 - u) * 255);   // G (green, inverted)
+        data[pixelIdx + 2] = Math.floor(v * 200);          // B (pink, less blue)
+        data[pixelIdx + 3] = 255;                           // A
+      }
+    }
+
+    this.ctx.putImageData(this.imageData, 0, 0);
+  }
+
+  exportPNG() {
+    return this.canvas.toDataURL('image/png');
+  }
+}
+
+// ═══════════════════════════════════════════════════════
+// APPLICATION STATE
+// ═══════════════════════════════════════════════════════
+const simulation = new GrayScottSimulation(256, 256);
+const renderer = new Renderer(canvas);
+
+let isRunning = true;
+let fps = 60;
+let frameCount = 0;
+let lastTime = performance.now();
+let fpsTime = lastTime;
+
+// Mouse state
+const mouse = {
+  x: 0,
+  y: 0,
+  isDown: false
+};
+
+// ═══════════════════════════════════════════════════════
+// UI WIRING
+// ═══════════════════════════════════════════════════════
+
+// Sliders
+const sliders = {
+  f: { slider: document.getElementById('slF'), value: document.getElementById('valF') },
+  k: { slider: document.getElementById('slK'), value: document.getElementById('valK') },
+  Du: { slider: document.getElementById('slDu'), value: document.getElementById('valDu') },
+  Dv: { slider: document.getElementById('slDv'), value: document.getElementById('valDv') },
+  speed: { slider: document.getElementById('slSpeed'), value: document.getElementById('valSpeed') },
+  brush: { slider: document.getElementById('slBrush'), value: document.getElementById('valBrush') }
+};
+
+// Feed Rate
+sliders.f.slider.addEventListener('input', (e) => {
+  P.f = parseFloat(e.target.value);
+  sliders.f.value.textContent = P.f.toFixed(3);
+  simulation.setParameters(P.f, P.k, P.Du, P.Dv);
+  clearActivePreset();
+});
+
+// Kill Rate
+sliders.k.slider.addEventListener('input', (e) => {
+  P.k = parseFloat(e.target.value);
+  sliders.k.value.textContent = P.k.toFixed(3);
+  simulation.setParameters(P.f, P.k, P.Du, P.Dv);
+  clearActivePreset();
+});
+
+// Diffusion U
+sliders.Du.slider.addEventListener('input', (e) => {
+  P.Du = parseFloat(e.target.value);
+  sliders.Du.value.textContent = P.Du.toFixed(2);
+  simulation.setParameters(P.f, P.k, P.Du, P.Dv);
+  clearActivePreset();
+});
+
+// Diffusion V
+sliders.Dv.slider.addEventListener('input', (e) => {
+  P.Dv = parseFloat(e.target.value);
+  sliders.Dv.value.textContent = P.Dv.toFixed(2);
+  simulation.setParameters(P.f, P.k, P.Du, P.Dv);
+  clearActivePreset();
+});
+
+// Speed
+sliders.speed.slider.addEventListener('input', (e) => {
+  P.speed = parseFloat(e.target.value);
+  sliders.speed.value.textContent = P.speed.toFixed(1) + 'x';
+});
+
+// Brush Size
+sliders.brush.slider.addEventListener('input', (e) => {
+  P.brushSize = parseInt(e.target.value);
+  sliders.brush.value.textContent = P.brushSize + 'px';
+});
+
+// Presets
+function applyPreset(presetName) {
+  const preset = PRESETS[presetName];
+  if (!preset) return;
+
+  currentPreset = presetName;
+  P.f = preset.f;
+  P.k = preset.k;
+  P.Du = preset.Du;
+  P.Dv = preset.Dv;
+
+  // Update sliders
+  sliders.f.slider.value = P.f;
+  sliders.f.value.textContent = P.f.toFixed(3);
+  sliders.k.slider.value = P.k;
+  sliders.k.value.textContent = P.k.toFixed(3);
+  sliders.Du.slider.value = P.Du;
+  sliders.Du.value.textContent = P.Du.toFixed(2);
+  sliders.Dv.slider.value = P.Dv;
+  sliders.Dv.value.textContent = P.Dv.toFixed(2);
+
+  // Update simulation and stats
+  simulation.setParameters(P.f, P.k, P.Du, P.Dv);
+  simulation.reset();
+  document.getElementById('sPattern').textContent = preset.name;
+
+  // Update active button
+  document.querySelectorAll('.preset-btn').forEach(btn => btn.classList.remove('active'));
+  const btnId = presetName === 'leopardSpots' ? 'btnLeopard' :
+                presetName === 'zebraStripes' ? 'btnZebra' : 'btnMitosis';
+  document.getElementById(btnId).classList.add('active');
+}
+
+function clearActivePreset() {
+  document.querySelectorAll('.preset-btn').forEach(btn => btn.classList.remove('active'));
+  document.getElementById('sPattern').textContent = 'Custom';
+}
+
+document.getElementById('btnLeopard').addEventListener('click', () => applyPreset('leopardSpots'));
+document.getElementById('btnZebra').addEventListener('click', () => applyPreset('zebraStripes'));
+document.getElementById('btnMitosis').addEventListener('click', () => applyPreset('mitosis'));
+
+// Play/Pause
+document.getElementById('btnPause').addEventListener('click', () => {
+  isRunning = !isRunning;
+  const btn = document.getElementById('btnPause');
+  btn.textContent = isRunning ? '⏸ Pause' : '▶ Play';
+});
+
+// Reset
+document.getElementById('btnReset').addEventListener('click', () => {
+  simulation.reset();
+});
+
+// Export PNG
+document.getElementById('btnExport').addEventListener('click', () => {
+  const dataURL = renderer.exportPNG();
+  const link = document.createElement('a');
+  link.download = 'turing-pattern.png';
+  link.href = dataURL;
+  link.click();
+});
+
+// ═══════════════════════════════════════════════════════
+// MOUSE INTERACTION
+// ═══════════════════════════════════════════════════════
+
+function getGridCoords(e) {
+  const rect = canvas.getBoundingClientRect();
+  const canvasX = e.clientX - rect.left;
+  const canvasY = e.clientY - rect.top;
+
+  // Map canvas coords to grid coords
+  const scaleX = canvas.width / rect.width;
+  const scaleY = canvas.height / rect.height;
+  const pixelX = canvasX * scaleX;
+  const pixelY = canvasY * scaleY;
+
+  const gridX = Math.floor(pixelX * simulation.width / canvas.width);
+  const gridY = Math.floor(pixelY * simulation.height / canvas.height);
+
+  return { gridX, gridY };
+}
+
+canvas.addEventListener('mousedown', (e) => {
+  mouse.isDown = true;
+  const { gridX, gridY } = getGridCoords(e);
+  const radius = Math.floor(P.brushSize / 2);
+  simulation.seed(gridX, gridY, radius);
+});
+
+canvas.addEventListener('mousemove', (e) => {
+  if (mouse.isDown) {
+    const { gridX, gridY } = getGridCoords(e);
+    const radius = Math.floor(P.brushSize / 2);
+    simulation.seed(gridX, gridY, radius);
+  }
+});
+
+canvas.addEventListener('mouseup', () => {
+  mouse.isDown = false;
+});
+
+canvas.addEventListener('mouseleave', () => {
+  mouse.isDown = false;
+});
+
+// ═══════════════════════════════════════════════════════
+// ANIMATION LOOP
+// ═══════════════════════════════════════════════════════
+
+function animate() {
+  requestAnimationFrame(animate);
+
+  const currentTime = performance.now();
+  frameCount++;
+
+  // Update FPS counter (every second)
+  if (currentTime - fpsTime >= 1000) {
+    fps = Math.round(frameCount * 1000 / (currentTime - fpsTime));
+    document.getElementById('sFps').textContent = fps;
+    frameCount = 0;
+    fpsTime = currentTime;
+
+    // Update average concentrations
+    document.getElementById('sUAvg').textContent = simulation.getAverageU().toFixed(2);
+    document.getElementById('sVAvg').textContent = simulation.getAverageV().toFixed(2);
+  }
+
+  // Update simulation (multiple steps based on speed)
+  if (isRunning) {
+    const stepsPerFrame = Math.max(1, Math.floor(P.speed));
+    for (let step = 0; step < stepsPerFrame; step++) {
+      simulation.update();
+    }
+  }
+
+  // Render
+  renderer.render(simulation);
+
+  lastTime = currentTime;
+}
+
+// ═══════════════════════════════════════════════════════
+// BOOT
+// ═══════════════════════════════════════════════════════
+applyPreset('leopardSpots');
+animate();
+</script>
+</body>
+</html>
