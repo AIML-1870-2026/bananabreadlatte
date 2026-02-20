@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>bananabreadlatte — AIML 1870</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Century Schoolbook', serif;
+      background-color: #c8e6c9;
+      background-image: repeating-linear-gradient(
+        0deg,
+        transparent,
+        transparent 25px,
+        #FFF0F5 25px,
+        #FFF0F5 27px,
+        transparent 27px,
+        transparent 52px,
+        #E6C8C9 52px,
+        #E6C8C9 54px
+      );
+      min-height: 100vh;
+      color: #C96567;
+      padding: 2em 1em 4em;
+    }
+
+    header {
+      text-align: center;
+      margin-bottom: 2.5em;
+    }
+
+    header h1 {
+      font-size: 3em;
+      letter-spacing: 0.02em;
+    }
+
+    header p {
+      font-size: 1.1em;
+      margin-top: 0.4em;
+      color: #a05050;
+    }
+
+    .divider {
+      border: none;
+      border-top: 2px solid #E6C8C9;
+      margin: 1em auto;
+      width: 60%;
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+      gap: 1.5em;
+      max-width: 900px;
+      margin: 0 auto;
+    }
+
+    .card {
+      background-color: #FFF0F5;
+      border-radius: 12px;
+      padding: 1.5em 1.2em;
+      text-decoration: none;
+      color: #C96567;
+      transition: transform 0.15s ease, box-shadow 0.15s ease;
+      box-shadow: 0 2px 6px rgba(201, 101, 103, 0.15);
+      display: flex;
+      flex-direction: column;
+      gap: 0.4em;
+    }
+
+    .card:hover {
+      transform: translateY(-3px);
+      box-shadow: 0 6px 16px rgba(201, 101, 103, 0.25);
+    }
+
+    .card-title {
+      font-size: 1.2em;
+      font-weight: bold;
+    }
+
+    .card-label {
+      font-size: 0.8em;
+      color: #a05050;
+      font-style: italic;
+    }
+
+    footer {
+      text-align: center;
+      margin-top: 3em;
+      font-size: 0.85em;
+      color: #a05050;
+    }
+  </style>
+</head>
+<body>
+
+  <header>
+    <h1>bananabreadlatte</h1>
+    <p>AIML 1870 Portfolio &mdash; AIML-1870-2026</p>
+    <hr class="divider">
+  </header>
+
+  <div class="grid">
+
+    <a class="card" href="Assignment-01/">
+      <span class="card-title">Assignment 01</span>
+      <span class="card-label">Hello, World</span>
+    </a>
+
+    <a class="card" href="Boids/">
+      <span class="card-title">Boids</span>
+      <span class="card-label">Flocking simulation</span>
+    </a>
+
+    <a class="card" href="Decision Neuron/">
+      <span class="card-title">Decision Neuron</span>
+      <span class="card-label">Neural logic explorer</span>
+    </a>
+
+    <a class="card" href="Julia Sets/">
+      <span class="card-title">Julia Sets</span>
+      <span class="card-label">Fractal visualizer</span>
+    </a>
+
+    <a class="card" href="Snake/">
+      <span class="card-title">Bread Chase</span>
+      <span class="card-label">Snake game</span>
+    </a>
+
+    <a class="card" href="Starfield/">
+      <span class="card-title">Starfield</span>
+      <span class="card-label">Warp speed simulation</span>
+    </a>
+
+    <a class="card" href="Stellar Web/">
+      <span class="card-title">Stellar Web</span>
+      <span class="card-label">Interactive star map</span>
+    </a>
+
+    <a class="card" href="color palette/">
+      <span class="card-title">RGB Candy Machine</span>
+      <span class="card-label">Color palette tool</span>
+    </a>
+
+    <a class="card" href="Turing Pattern/">
+      <span class="card-title">Turing Pattern</span>
+      <span class="card-label">Reaction-diffusion sim</span>
+    </a>
+
+  </div>
+
+  <footer>
+    <p>https://aiml-1870-2026.github.io/bananabreadlatte/</p>
+  </footer>
+
+</body>
+</html>
