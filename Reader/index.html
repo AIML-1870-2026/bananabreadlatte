@@ -1,0 +1,504 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Readable Explorer</title>
+  <style>
+    :root {
+      --g1:  #0D2818;
+      --g2:  #1B4332;
+      --g3:  #2D6A4F;
+      --g4:  #40916C;
+      --g5:  #52B788;
+      --g6:  #74C69D;
+      --g7:  #95D5B2;
+      --g8:  #B7E4C7;
+      --g9:  #D8F3DC;
+      --g10: #F0FAF4;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    html, body {
+      height: 100%;
+      overflow: hidden;
+      font-family: 'Century Schoolbook', 'Century Schoolbook L', 'Book Antiqua',
+                   'Palatino Linotype', Palatino, Georgia, serif;
+      background: var(--g10);
+      color: var(--g1);
+    }
+
+    /* ── Header ── */
+    header {
+      background: var(--g2);
+      color: var(--g9);
+      padding: 0.55rem 1.2rem;
+      display: flex;
+      align-items: baseline;
+      gap: 1rem;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+      flex-shrink: 0;
+    }
+    header h1 { font-size: 1.35rem; font-weight: 700; letter-spacing: 0.03em; }
+    header p  { font-size: 0.78rem; opacity: 0.7; font-style: italic; }
+
+    /* ── Page layout ── */
+    body { display: flex; flex-direction: column; }
+
+    .page {
+      flex: 1;
+      display: flex;
+      padding: 0.65rem;
+      gap: 0.65rem;
+      overflow: hidden;
+      min-height: 0;
+    }
+
+    /* ── Left panel ── */
+    .left-panel {
+      display: flex;
+      flex-direction: column;
+      gap: 0.55rem;
+      width: 300px;
+      flex-shrink: 0;
+    }
+
+    /* ── Right panel ── */
+    .right-panel {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      gap: 0.55rem;
+      min-width: 0;
+      min-height: 0;
+    }
+
+    /* ── Cards ── */
+    .card {
+      background: white;
+      border-radius: 10px;
+      padding: 0.6rem 0.8rem;
+      box-shadow: 0 2px 8px rgba(27,67,50,0.1);
+      border: 1px solid var(--g9);
+    }
+
+    .card h2 {
+      font-size: 0.72rem;
+      font-weight: 700;
+      color: var(--g3);
+      margin-bottom: 0.5rem;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      display: flex;
+      align-items: center;
+      gap: 0.4rem;
+    }
+    .card h2::before {
+      content: '';
+      display: inline-block;
+      width: 3px;
+      height: 0.72rem;
+      background: var(--g5);
+      border-radius: 2px;
+    }
+
+    /* ── Channel rows ── */
+    .channel-row {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      margin-bottom: 0.38rem;
+    }
+    .channel-row:last-of-type { margin-bottom: 0.25rem; }
+
+    .channel-label {
+      font-weight: 700;
+      font-size: 0.72rem;
+      width: 0.9rem;
+      text-align: center;
+      flex-shrink: 0;
+    }
+    .channel-label.r { color: #c0392b; }
+    .channel-label.g { color: #1e8449; }
+    .channel-label.b { color: #2471a3; }
+
+    input[type="range"] {
+      flex: 1;
+      -webkit-appearance: none;
+      height: 5px;
+      border-radius: 3px;
+      background: var(--g9);
+      outline: none;
+      cursor: pointer;
+    }
+    input[type="range"]::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      width: 14px;
+      height: 14px;
+      border-radius: 50%;
+      background: var(--g3);
+      border: 2px solid white;
+      box-shadow: 0 1px 4px rgba(27,67,50,0.45);
+      cursor: pointer;
+    }
+    input[type="range"]:focus::-webkit-slider-thumb {
+      box-shadow: 0 0 0 3px rgba(82,183,136,0.35);
+    }
+
+    input[type="number"] {
+      width: 50px;
+      padding: 0.18rem 0.28rem;
+      border: 1.5px solid var(--g8);
+      border-radius: 6px;
+      font-size: 0.78rem;
+      font-family: inherit;
+      text-align: center;
+      color: var(--g1);
+      outline: none;
+      transition: border-color 0.15s;
+      flex-shrink: 0;
+    }
+    input[type="number"]:focus { border-color: var(--g4); }
+
+    .swatch-row {
+      display: flex;
+      align-items: center;
+      gap: 0.55rem;
+      margin-top: 0.3rem;
+    }
+    .color-swatch {
+      width: 20px;
+      height: 20px;
+      border-radius: 50%;
+      border: 2px solid var(--g7);
+      flex-shrink: 0;
+    }
+    .hex-label {
+      font-family: 'Courier New', monospace;
+      font-size: 0.76rem;
+      color: var(--g3);
+    }
+
+    /* ── Size row ── */
+    .size-row {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+    .size-unit {
+      font-size: 0.72rem;
+      font-weight: 700;
+      color: var(--g2);
+      width: 1.5rem;
+      flex-shrink: 0;
+    }
+
+    /* ── Preview ── */
+    #preview-card {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      min-height: 0;
+    }
+    #text-display {
+      flex: 1;
+      border-radius: 7px;
+      padding: 0.8rem;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      border: 2px solid var(--g8);
+      transition: background-color 0.07s, color 0.07s;
+      line-height: 1.55;
+      overflow: hidden;
+      min-height: 0;
+    }
+
+    /* ── Stats ── */
+    .stats-inner {
+      display: grid;
+      grid-template-columns: 1fr auto 1fr;
+      gap: 0.55rem;
+      align-items: center;
+    }
+    .stat-box {
+      background: var(--g10);
+      border: 1px solid var(--g9);
+      border-radius: 7px;
+      padding: 0.35rem 0.5rem;
+      text-align: center;
+    }
+    .stat-box.contrast {
+      background: var(--g2);
+      border-color: var(--g1);
+    }
+    .stat-label {
+      font-size: 0.6rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.09em;
+      color: var(--g4);
+      margin-bottom: 0.15rem;
+    }
+    .stat-box.contrast .stat-label { color: var(--g7); }
+    .stat-value {
+      font-size: 1rem;
+      font-weight: 800;
+      color: var(--g2);
+    }
+    .stat-box.contrast .stat-value {
+      font-size: 1.25rem;
+      color: var(--g9);
+    }
+
+    /* ── WCAG ── */
+    .wcag-inner {
+      display: flex;
+      align-items: center;
+      gap: 0.55rem;
+      flex-wrap: wrap;
+    }
+    .wcag-label {
+      font-size: 0.68rem;
+      font-weight: 700;
+      color: var(--g3);
+      text-transform: uppercase;
+      letter-spacing: 0.09em;
+      white-space: nowrap;
+    }
+    .wcag-badge {
+      display: flex;
+      align-items: center;
+      gap: 0.35rem;
+      padding: 0.25rem 0.65rem;
+      border-radius: 50px;
+      font-weight: 700;
+      font-size: 0.7rem;
+      white-space: nowrap;
+      transition: background 0.15s;
+    }
+    .wcag-badge.pass { background: #d4edda; color: #155724; border: 1px solid #b8dfc7; }
+    .wcag-badge.fail { background: #f8d7da; color: #721c24; border: 1px solid #f5c6cb; }
+    .wcag-dot { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; }
+    .pass .wcag-dot { background: #28a745; }
+    .fail .wcag-dot { background: #dc3545; }
+
+    /* ── Presets ── */
+    .presets-inner {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.35rem;
+    }
+    .preset-btn {
+      padding: 0.25rem 0.65rem;
+      border: 1.5px solid var(--g8);
+      border-radius: 50px;
+      background: white;
+      cursor: pointer;
+      font-size: 0.68rem;
+      font-family: inherit;
+      font-weight: 600;
+      color: var(--g3);
+      transition: background 0.1s, transform 0.08s, border-color 0.1s;
+    }
+    .preset-btn:hover {
+      background: var(--g9);
+      border-color: var(--g5);
+      transform: translateY(-1px);
+    }
+    .preset-btn:active { transform: translateY(0); }
+  </style>
+</head>
+<body>
+
+<header>
+  <h1>Readable Explorer</h1>
+  <p>WCAG 2.1 Color Contrast &amp; Readability Tool</p>
+</header>
+
+<div class="page">
+
+  <!-- ── Left panel ── -->
+  <div class="left-panel">
+
+    <div class="card">
+      <h2>Background Color</h2>
+      <div class="channel-row">
+        <span class="channel-label r">R</span>
+        <input type="range"  id="bg-r"     min="0" max="255" value="255">
+        <input type="number" id="bg-r-num" min="0" max="255" value="255">
+      </div>
+      <div class="channel-row">
+        <span class="channel-label g">G</span>
+        <input type="range"  id="bg-g"     min="0" max="255" value="255">
+        <input type="number" id="bg-g-num" min="0" max="255" value="255">
+      </div>
+      <div class="channel-row">
+        <span class="channel-label b">B</span>
+        <input type="range"  id="bg-b"     min="0" max="255" value="255">
+        <input type="number" id="bg-b-num" min="0" max="255" value="255">
+      </div>
+      <div class="swatch-row">
+        <div class="color-swatch" id="bg-swatch"></div>
+        <span class="hex-label" id="bg-hex">#FFFFFF</span>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>Text Color</h2>
+      <div class="channel-row">
+        <span class="channel-label r">R</span>
+        <input type="range"  id="txt-r"     min="0" max="255" value="0">
+        <input type="number" id="txt-r-num" min="0" max="255" value="0">
+      </div>
+      <div class="channel-row">
+        <span class="channel-label g">G</span>
+        <input type="range"  id="txt-g"     min="0" max="255" value="0">
+        <input type="number" id="txt-g-num" min="0" max="255" value="0">
+      </div>
+      <div class="channel-row">
+        <span class="channel-label b">B</span>
+        <input type="range"  id="txt-b"     min="0" max="255" value="0">
+        <input type="number" id="txt-b-num" min="0" max="255" value="0">
+      </div>
+      <div class="swatch-row">
+        <div class="color-swatch" id="txt-swatch"></div>
+        <span class="hex-label" id="txt-hex">#000000</span>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>Text Size</h2>
+      <div class="size-row">
+        <span class="size-unit">px</span>
+        <input type="range"  id="font-size"     min="8" max="72" value="16">
+        <input type="number" id="font-size-num" min="8" max="72" value="16">
+      </div>
+    </div>
+
+  </div>
+
+  <!-- ── Right panel ── -->
+  <div class="right-panel">
+
+    <div class="card" id="preview-card">
+      <h2>Text Preview</h2>
+      <div id="text-display">
+        The quick brown fox jumps over the lazy dog.
+        Pack my box with five dozen liquor jugs.
+        How vividly daft jumping zebras vex.
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="stats-inner">
+        <div class="stat-box">
+          <div class="stat-label">BG Luminance</div>
+          <div class="stat-value" id="bg-lum">1.000</div>
+        </div>
+        <div class="stat-box contrast">
+          <div class="stat-label">Contrast Ratio</div>
+          <div class="stat-value" id="contrast-ratio">21.00:1</div>
+        </div>
+        <div class="stat-box">
+          <div class="stat-label">Text Luminance</div>
+          <div class="stat-value" id="txt-lum">0.000</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="wcag-inner">
+        <span class="wcag-label">WCAG 2.1</span>
+        <div class="wcag-badge pass" id="badge-normal">
+          <span class="wcag-dot"></span>
+          <span id="badge-normal-text">Normal Text (&lt;24px) 4.5:1 — PASS</span>
+        </div>
+        <div class="wcag-badge pass" id="badge-large">
+          <span class="wcag-dot"></span>
+          <span id="badge-large-text">Large Text (≥24px) 3:1 — PASS</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>Presets</h2>
+      <div class="presets-inner">
+        <button class="preset-btn" data-bg="255,255,255" data-txt="0,0,0"       >High Contrast</button>
+        <button class="preset-btn" data-bg="0,0,0"       data-txt="255,255,255" >White on Black</button>
+        <button class="preset-btn" data-bg="255,255,224" data-txt="180,180,180" >Low Contrast (Fails)</button>
+        <button class="preset-btn" data-bg="0,0,128"     data-txt="255,255,255" >Navy + White</button>
+        <button class="preset-btn" data-bg="255,240,0"   data-txt="255,200,0"   >Yellow on Yellow (Fails)</button>
+        <button class="preset-btn" data-bg="34,139,34"   data-txt="255,255,255" >Forest Green</button>
+        <button class="preset-btn" data-bg="255,182,193" data-txt="139,0,0"     >Pink Theme</button>
+        <button class="preset-btn" data-bg="18,52,18"    data-txt="180,255,180" >Dark Green</button>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<script>
+  function clamp(v) { return Math.max(0, Math.min(255, Math.round(Number(v)))); }
+  function toHex(r,g,b) { return '#'+[r,g,b].map(n=>n.toString(16).padStart(2,'0').toUpperCase()).join(''); }
+  function linearize(c) { const cl=c/255; return cl<=0.04045?cl/12.92:Math.pow((cl+0.055)/1.055,2.4); }
+  function luminance(r,g,b) { return 0.2126*linearize(r)+0.7152*linearize(g)+0.0722*linearize(b); }
+  function contrastRatio(l1,l2) { const hi=Math.max(l1,l2),lo=Math.min(l1,l2); return (hi+0.05)/(lo+0.05); }
+
+  const bg={r:255,g:255,b:255}, txt={r:0,g:0,b:0};
+  let fontSize=16;
+  const $=id=>document.getElementById(id);
+
+  function update() {
+    const bgCss=`rgb(${bg.r},${bg.g},${bg.b})`, txtCss=`rgb(${txt.r},${txt.g},${txt.b})`;
+    $('text-display').style.backgroundColor=bgCss;
+    $('text-display').style.color=txtCss;
+    $('text-display').style.fontSize=fontSize+'px';
+    $('bg-swatch').style.backgroundColor=bgCss;
+    $('txt-swatch').style.backgroundColor=txtCss;
+    $('bg-hex').textContent=toHex(bg.r,bg.g,bg.b);
+    $('txt-hex').textContent=toHex(txt.r,txt.g,txt.b);
+    const bgL=luminance(bg.r,bg.g,bg.b), txtL=luminance(txt.r,txt.g,txt.b);
+    $('bg-lum').textContent=bgL.toFixed(3);
+    $('txt-lum').textContent=txtL.toFixed(3);
+    const ratio=contrastRatio(bgL,txtL);
+    $('contrast-ratio').textContent=ratio.toFixed(2)+':1';
+    const np=ratio>=4.5, lp=ratio>=3.0;
+    $('badge-normal').className='wcag-badge '+(np?'pass':'fail');
+    $('badge-normal-text').textContent=`Normal Text (<24px) 4.5:1 \u2014 ${np?'PASS':'FAIL'}`;
+    $('badge-large').className='wcag-badge '+(lp?'pass':'fail');
+    $('badge-large-text').textContent=`Large Text (\u226524px) 3:1 \u2014 ${lp?'PASS':'FAIL'}`;
+  }
+
+  function syncBg(ch,val){ val=clamp(val);bg[ch]=val;$(`bg-${ch}`).value=val;$(`bg-${ch}-num`).value=val;update(); }
+  function syncTxt(ch,val){ val=clamp(val);txt[ch]=val;$(`txt-${ch}`).value=val;$(`txt-${ch}-num`).value=val;update(); }
+
+  ['r','g','b'].forEach(ch=>{
+    $(`bg-${ch}`).addEventListener('input',()=>syncBg(ch,$(`bg-${ch}`).value));
+    $(`bg-${ch}-num`).addEventListener('input',()=>syncBg(ch,$(`bg-${ch}-num`).value));
+    $(`txt-${ch}`).addEventListener('input',()=>syncTxt(ch,$(`txt-${ch}`).value));
+    $(`txt-${ch}-num`).addEventListener('input',()=>syncTxt(ch,$(`txt-${ch}-num`).value));
+  });
+
+  $('font-size').addEventListener('input',()=>{ fontSize=parseInt($('font-size').value);$('font-size-num').value=fontSize;update(); });
+  $('font-size-num').addEventListener('input',()=>{ fontSize=Math.max(8,Math.min(72,parseInt($('font-size-num').value)||16));$('font-size').value=fontSize;update(); });
+
+  document.querySelectorAll('.preset-btn').forEach(btn=>{
+    btn.addEventListener('click',()=>{
+      const [br,bg2,bb]=btn.dataset.bg.split(',').map(Number);
+      const [tr,tg,tb]=btn.dataset.txt.split(',').map(Number);
+      bg.r=br;bg.g=bg2;bg.b=bb;txt.r=tr;txt.g=tg;txt.b=tb;
+      ['r','g','b'].forEach(ch=>{
+        $(`bg-${ch}`).value=bg[ch];$(`bg-${ch}-num`).value=bg[ch];
+        $(`txt-${ch}`).value=txt[ch];$(`txt-${ch}-num`).value=txt[ch];
+      });
+      update();
+    });
+  });
+
+  update();
+</script>
+</body>
+</html>
