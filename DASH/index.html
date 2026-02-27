@@ -111,7 +111,7 @@ PaletteManager.update = function(dt) {
     const t = this.target[key];
     this.current[key] = c.map((v, i) => {
       const diff = t[i] - v;
-      return Math.abs(diff) < 0.1 ? t[i] : v + diff * 0.008;
+      return Math.abs(diff) < 0.1 ? t[i] : v + diff * 0.018;
     });
   }
 };
@@ -381,8 +381,12 @@ const Background = {
   bubbles: [],
   foamLines: [],
   scrollOffsets: [0, 0, 0, 0, 0],
+  motes: [],
+  moteTimer: 0,
 
   init() {
+    this.motes = [];
+    this.moteTimer = 0;
     this.bubbles = [];
     for (let i = 0; i < 20; i++) {
       this.bubbles.push({
@@ -422,6 +426,33 @@ const Background = {
     }
     for (const f of this.foamLines) {
       f.offset += speed * 0.3 * sdt * 60 * 0.01;
+    }
+
+    // Atmospheric motes — tiny foam-colored particles drifting through the air
+    this.moteTimer += sdt;
+    const spawnInterval = Math.max(0.06, 0.22 - gamePhase * 0.025);
+    if (this.moteTimer >= spawnInterval) {
+      this.moteTimer = 0;
+      const count = gamePhase >= 3 ? 2 : 1;
+      for (let i = 0; i < count; i++) {
+        this.motes.push({
+          x: W() + 8,
+          y: 20 + Math.random() * (GROUND() - 30),
+          size: 0.8 + Math.random() * 2.5,
+          alpha: 0.08 + Math.random() * 0.22,
+          vx: speed * (0.3 + Math.random() * 0.25),
+          vy: -0.04 + (Math.random() - 0.5) * 0.06,
+          wobble: Math.random() * Math.PI * 2,
+          wobbleSpeed: 0.03 + Math.random() * 0.04,
+        });
+      }
+    }
+    for (let i = this.motes.length - 1; i >= 0; i--) {
+      const m = this.motes[i];
+      m.x -= m.vx * sdt * 60;
+      m.wobble += m.wobbleSpeed * sdt * 60;
+      m.y += Math.sin(m.wobble) * 0.3;
+      if (m.x < -10) this.motes.splice(i, 1);
     }
   },
 
@@ -469,6 +500,17 @@ const Background = {
         x === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
       }
       ctx.stroke();
+    }
+    ctx.restore();
+
+    // Atmospheric motes
+    ctx.save();
+    for (const m of this.motes) {
+      ctx.globalAlpha = m.alpha;
+      ctx.fillStyle = PaletteManager.rgb('foam');
+      ctx.beginPath();
+      ctx.arc(m.x, m.y, m.size, 0, Math.PI * 2);
+      ctx.fill();
     }
     ctx.restore();
 
@@ -594,6 +636,16 @@ function drawCreamDollop(w, h, caramel) {
   ctx.fillStyle = '#ffffff';
   ctx.beginPath();
   ctx.ellipse(-hw * 0.16, -h * 0.44, hw * 0.12, h * 0.15, -0.45, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.restore();
+
+  // Foam-color phase tint (shifts subtly with world palette)
+  const ft = PaletteManager.current.foam;
+  ctx.save();
+  ctx.globalAlpha = 0.09;
+  ctx.fillStyle = `rgb(${Math.round(ft[0])},${Math.round(ft[1])},${Math.round(ft[2])})`;
+  ctx.beginPath();
+  ctx.ellipse(0, -h * 0.38, hw * 0.82, h * 0.52, 0, 0, Math.PI * 2);
   ctx.fill();
   ctx.restore();
 
@@ -1087,6 +1139,8 @@ let scoreCountUp = 0;
 let finalScore = 0;
 let shakeTriggered = false;
 let isNewBest = false;
+let phaseBannerTimer = 0;
+let phaseFlashTimer = 0;
 
 const PHASE_DATA = [
   { time: 0,   speed: 2.8, palette: 'espresso', phase: 1 },
@@ -1108,6 +1162,8 @@ function startGame() {
   overlayAlpha = 0;
   shakeTriggered = false;
   isNewBest = false;
+  phaseBannerTimer = 0;
+  phaseFlashTimer = 0;
   currentPhaseIdx = 0;
   SlowMo.active = false;
   SlowMo.scale = 1;
@@ -1175,6 +1231,29 @@ const Steam = {
   }
 };
 
+// ─── VIGNETTE + PHASE BANNER ───────────────────────────────────────────────
+const PHASE_LABELS = ['', 'ESPRESSO', 'LATTE', 'MATCHA', 'DOUBLE SHOT', 'OVERDOSE'];
+const PHASE_ICONS  = ['', '☕', '☕', '🍵', '🍵', '⚡'];
+
+function drawVignette() {
+  const c = PaletteManager.current.bgTop;
+  const r = Math.round(c[0]), g = Math.round(c[1]), b = Math.round(c[2]);
+  const grd = ctx.createRadialGradient(W() / 2, H() / 2, H() * 0.2, W() / 2, H() / 2, Math.max(W(), H()) * 0.82);
+  grd.addColorStop(0, 'rgba(0,0,0,0)');
+  grd.addColorStop(1, `rgba(${r},${g},${b},0.6)`);
+  ctx.fillStyle = grd;
+  ctx.fillRect(0, 0, W(), H());
+}
+
+function drawPhaseFlash(timer) {
+  if (timer <= 0) return;
+  const t = timer / 0.6;
+  const alpha = (t < 0.5 ? t / 0.5 : (1 - t) / 0.5) * 0.28;
+  const f = PaletteManager.current.foam;
+  ctx.fillStyle = `rgba(${Math.round(f[0])},${Math.round(f[1])},${Math.round(f[2])},${alpha})`;
+  ctx.fillRect(0, 0, W(), H());
+}
+
 // ─── DRAW UI ───────────────────────────────────────────────────────────────
 function drawHUD() {
   ctx.font = 'bold 22px monospace';
@@ -1185,11 +1264,36 @@ function drawHUD() {
   ctx.fillText(`BEST  ${String(bestScore).padStart(5, '0')}`, W() - 175, 36);
   ctx.shadowBlur = 0;
 
-  // Phase indicator
-  const phaseNames = ['', '☕', '☕', '🍵', '🍵', '🍵'];
+  // Phase icon (top center)
   ctx.font = '18px monospace';
   ctx.fillStyle = '#fef6e4';
-  ctx.fillText(phaseNames[gamePhase] || '☕', W() / 2 - 10, 32);
+  ctx.fillText(PHASE_ICONS[gamePhase] || '☕', W() / 2 - 10, 32);
+
+  // Phase transition banner
+  if (phaseBannerTimer > 0) {
+    const t = phaseBannerTimer / 3.0;
+    const alpha = t > 0.85 ? (1 - t) / 0.15 : t < 0.15 ? t / 0.15 : 1;
+    ctx.save();
+    ctx.globalAlpha = alpha;
+    ctx.textAlign = 'center';
+    // Glow backdrop
+    ctx.font = 'bold 28px monospace';
+    ctx.shadowColor = PaletteManager.rgb('bgTop');
+    ctx.shadowBlur = 18;
+    ctx.fillStyle = PaletteManager.rgb('foam');
+    ctx.fillText(`${PHASE_ICONS[gamePhase]}  ${PHASE_LABELS[gamePhase]}`, W() / 2, H() * 0.14);
+    // Underline
+    const tw = ctx.measureText(`${PHASE_ICONS[gamePhase]}  ${PHASE_LABELS[gamePhase]}`).width;
+    ctx.shadowBlur = 0;
+    ctx.globalAlpha = alpha * 0.4;
+    ctx.strokeStyle = PaletteManager.rgb('foam');
+    ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    ctx.moveTo(W() / 2 - tw / 2, H() * 0.14 + 6);
+    ctx.lineTo(W() / 2 + tw / 2, H() * 0.14 + 6);
+    ctx.stroke();
+    ctx.restore();
+  }
 }
 
 function drawMenu() {
@@ -1308,12 +1412,16 @@ function loop(now) {
     if (nextPhase && gameTime >= nextPhase.time) {
       currentPhaseIdx++;
       gamePhase = PHASE_DATA[currentPhaseIdx].phase;
-      const targetSpeed = PHASE_DATA[currentPhaseIdx].speed;
       PaletteManager.setTarget(PHASE_DATA[currentPhaseIdx].palette);
+      phaseBannerTimer = 3.0;
+      phaseFlashTimer = 0.6;
     }
     // Smooth speed lerp toward target
     const targetSpd = PHASE_DATA[currentPhaseIdx].speed;
     gameSpeed += (targetSpd - gameSpeed) * 0.005;
+
+    if (phaseBannerTimer > 0) phaseBannerTimer -= dt;
+    if (phaseFlashTimer > 0) phaseFlashTimer -= dt;
 
     if (!Player.dead) {
       gameTime += dt;
@@ -1356,6 +1464,8 @@ function loop(now) {
     ObstacleManager.draw();
     Particles.draw();
     Player.draw();
+    drawVignette();
+    drawPhaseFlash(phaseFlashTimer);
     drawHUD();
   }
 
@@ -1381,6 +1491,7 @@ function loop(now) {
     ObstacleManager.draw();
     Particles.draw();
     Player.draw();
+    drawVignette();
     drawHUD();
     drawGameOver();
 
