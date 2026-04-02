@@ -1,0 +1,1337 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>✨ NEO Tracker — Close Approach Dashboard</title>
+  <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;600;700;900&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+  <script src="https://unpkg.com/globe.gl@2"></script>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg: #0d0a12;
+      --card-bg: #1a1025;
+      --pink: #ff6eb4;
+      --blush: #ffb3d9;
+      --rose: #ff3d9a;
+      --text: #ffe0f0;
+      --muted: #c48aaa;
+      --danger: #ff4466;
+      --safe: #c084fc;
+      --border: rgba(255, 110, 180, 0.22);
+      --glow: rgba(255, 110, 180, 0.12);
+    }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'Inter', sans-serif;
+      min-height: 100vh;
+      overflow-x: hidden;
+    }
+
+    /* ── Star field ── */
+    #starfield {
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    /* ── App wrapper ── */
+    #app {
+      position: relative;
+      z-index: 1;
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 1.5rem 1rem 4rem;
+    }
+
+    /* ── Header ── */
+    header {
+      text-align: center;
+      padding: 2.5rem 0 1.5rem;
+    }
+    header h1 {
+      font-family: 'Orbitron', monospace;
+      font-size: clamp(1.8rem, 5vw, 2.8rem);
+      font-weight: 900;
+      background: linear-gradient(135deg, var(--pink) 0%, var(--blush) 50%, var(--rose) 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      filter: drop-shadow(0 0 18px rgba(255, 110, 180, 0.45));
+      letter-spacing: 0.12em;
+    }
+    header .subtitle {
+      color: var(--muted);
+      margin-top: 0.5rem;
+      font-size: 0.9rem;
+      letter-spacing: 0.06em;
+    }
+
+    /* ── Tabs ── */
+    .tabs {
+      display: flex;
+      gap: 0.15rem;
+      border-bottom: 1px solid var(--border);
+      margin-bottom: 1.75rem;
+      overflow-x: auto;
+      scrollbar-width: none;
+    }
+    .tabs::-webkit-scrollbar { display: none; }
+
+    .tab-btn {
+      background: none;
+      border: none;
+      color: var(--muted);
+      font-family: 'Orbitron', monospace;
+      font-size: 0.72rem;
+      font-weight: 600;
+      letter-spacing: 0.06em;
+      padding: 0.75rem 1.25rem;
+      cursor: pointer;
+      border-bottom: 2px solid transparent;
+      position: relative;
+      bottom: -1px;
+      transition: color 0.2s, border-color 0.2s, text-shadow 0.2s;
+      white-space: nowrap;
+    }
+    .tab-btn:hover { color: var(--blush); }
+    .tab-btn.active {
+      color: var(--pink);
+      border-bottom-color: var(--pink);
+      text-shadow: 0 0 10px rgba(255, 110, 180, 0.5);
+    }
+
+    /* ── Tab panels ── */
+    .tab-panel { display: none; }
+    .tab-panel.active { display: block; }
+
+    /* ── Glassmorphism card ── */
+    .glass {
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      box-shadow: 0 0 24px var(--glow);
+      backdrop-filter: blur(12px);
+    }
+
+    /* ── Stat row ── */
+    .stat-row {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      gap: 1rem;
+      margin-bottom: 1.5rem;
+    }
+    .stat-card {
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 1.25rem 1rem;
+      text-align: center;
+      box-shadow: 0 0 20px var(--glow);
+    }
+    .stat-label {
+      font-family: 'Orbitron', monospace;
+      font-size: 0.63rem;
+      text-transform: uppercase;
+      letter-spacing: 0.13em;
+      color: var(--muted);
+      margin-bottom: 0.5rem;
+    }
+    .stat-value {
+      font-family: 'Orbitron', monospace;
+      font-size: 1.55rem;
+      font-weight: 700;
+      color: var(--pink);
+      text-shadow: 0 0 12px rgba(255, 110, 180, 0.45);
+    }
+    .stat-name {
+      font-size: 0.72rem;
+      color: var(--muted);
+      margin-top: 0.35rem;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    /* ── Controls bar ── */
+    .controls {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.9rem;
+      align-items: flex-end;
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 1rem 1.25rem;
+      margin-bottom: 1.25rem;
+      box-shadow: 0 0 20px var(--glow);
+    }
+    .ctrl-group {
+      display: flex;
+      flex-direction: column;
+      gap: 0.3rem;
+    }
+    .ctrl-group label {
+      font-family: 'Orbitron', monospace;
+      font-size: 0.63rem;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      color: var(--muted);
+    }
+    input[type="date"],
+    input[type="number"],
+    select {
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      color: var(--text);
+      padding: 0.48rem 0.75rem;
+      font-size: 0.875rem;
+      font-family: 'Inter', sans-serif;
+      outline: none;
+      transition: border-color 0.2s, box-shadow 0.2s;
+    }
+    input[type="date"]:focus,
+    input[type="number"]:focus,
+    select:focus {
+      border-color: var(--pink);
+      box-shadow: 0 0 0 2px rgba(255, 110, 180, 0.18);
+    }
+    input[type="range"] {
+      accent-color: var(--pink);
+      cursor: pointer;
+      width: 140px;
+    }
+    select option { background: #1a1025; }
+
+    .btn {
+      background: linear-gradient(135deg, var(--rose), var(--pink));
+      border: none;
+      border-radius: 8px;
+      color: #fff;
+      font-family: 'Orbitron', monospace;
+      font-size: 0.72rem;
+      font-weight: 700;
+      letter-spacing: 0.1em;
+      padding: 0.52rem 1.3rem;
+      cursor: pointer;
+      box-shadow: 0 0 16px rgba(255, 110, 180, 0.3);
+      transition: transform 0.15s, box-shadow 0.15s;
+    }
+    .btn:hover { transform: translateY(-1px); box-shadow: 0 0 26px rgba(255, 110, 180, 0.5); }
+    .btn:active { transform: none; }
+
+    /* ── Badges ── */
+    .badge {
+      display: inline-block;
+      border-radius: 20px;
+      font-size: 0.62rem;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      padding: 0.18rem 0.6rem;
+      text-transform: uppercase;
+      white-space: nowrap;
+    }
+    .badge-pha {
+      background: rgba(255, 68, 102, 0.18);
+      border: 1px solid rgba(255, 68, 102, 0.45);
+      color: #ff7788;
+    }
+    .badge-safe {
+      background: rgba(192, 132, 252, 0.14);
+      border: 1px solid rgba(192, 132, 252, 0.38);
+      color: var(--safe);
+    }
+
+    /* ── Asteroid card list (Tab 1) ── */
+    .section-title {
+      font-family: 'Orbitron', monospace;
+      font-size: 0.72rem;
+      font-weight: 700;
+      letter-spacing: 0.12em;
+      color: var(--blush);
+      text-transform: uppercase;
+      margin-bottom: 0.85rem;
+    }
+    .asteroid-list { display: flex; flex-direction: column; gap: 0.75rem; }
+
+    .asteroid-card {
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 1rem 1.25rem;
+      box-shadow: 0 0 14px var(--glow);
+      transition: box-shadow 0.2s;
+    }
+    .asteroid-card:hover { box-shadow: 0 0 28px rgba(255, 110, 180, 0.22); }
+    .asteroid-card.pha {
+      border-color: rgba(255, 68, 102, 0.38);
+      box-shadow: 0 0 16px rgba(255, 68, 102, 0.14);
+    }
+    .asteroid-card.pha:hover { box-shadow: 0 0 30px rgba(255, 68, 102, 0.28); }
+
+    .ast-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      flex-wrap: wrap;
+      gap: 0.5rem;
+      margin-bottom: 0.8rem;
+    }
+    .ast-name {
+      font-family: 'Orbitron', monospace;
+      font-size: 0.88rem;
+      font-weight: 700;
+      color: var(--blush);
+    }
+    .ast-date { font-size: 0.78rem; color: var(--muted); margin-top: 0.15rem; }
+
+    .ast-stats {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+      gap: 0.5rem;
+    }
+    .ast-stat {
+      background: rgba(255, 255, 255, 0.03);
+      border-radius: 8px;
+      padding: 0.45rem 0.75rem;
+    }
+    .ast-key {
+      font-size: 0.62rem;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      color: var(--muted);
+      margin-bottom: 0.18rem;
+    }
+    .ast-val {
+      font-family: monospace;
+      font-size: 0.95rem;
+      color: var(--pink);
+    }
+    .ast-sub { font-size: 0.68rem; color: var(--muted); }
+
+    /* ── Data table (Tab 2 & 3) ── */
+    .results-count {
+      font-size: 0.8rem;
+      color: var(--muted);
+      margin-bottom: 0.75rem;
+    }
+    .results-count strong { color: var(--pink); }
+
+    .table-wrap {
+      overflow-x: auto;
+      border-radius: 14px;
+      border: 1px solid var(--border);
+    }
+    table { width: 100%; border-collapse: collapse; font-size: 0.84rem; }
+
+    thead th {
+      background: rgba(255, 110, 180, 0.1);
+      color: var(--pink);
+      font-family: 'Orbitron', monospace;
+      font-size: 0.62rem;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      padding: 0.75rem 1rem;
+      text-align: left;
+      cursor: pointer;
+      user-select: none;
+      white-space: nowrap;
+      transition: background 0.15s;
+    }
+    thead th:hover { background: rgba(255, 110, 180, 0.2); }
+
+    tbody tr {
+      border-top: 1px solid rgba(255, 110, 180, 0.07);
+      transition: background 0.12s;
+    }
+    tbody tr:nth-child(even) { background: rgba(255, 110, 180, 0.025); }
+    tbody tr:hover { background: rgba(255, 110, 180, 0.07); cursor: pointer; }
+    tbody tr.exp-row { cursor: default; }
+    tbody tr.exp-row:hover { background: rgba(255, 110, 180, 0.04); }
+
+    tbody td {
+      padding: 0.65rem 1rem;
+      color: var(--text);
+      white-space: nowrap;
+    }
+    td.mono { font-family: monospace; color: var(--pink); }
+    td .sub { display: block; font-size: 0.68rem; color: var(--muted); }
+    td a { color: var(--blush); text-decoration: none; }
+    td a:hover { text-decoration: underline; }
+
+    .exp-detail {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(155px, 1fr));
+      gap: 0.5rem;
+      padding: 0.5rem 0.25rem;
+    }
+    .exp-detail-item { }
+    .exp-detail-item .dk {
+      font-size: 0.65rem;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--muted);
+    }
+    .exp-detail-item .dv {
+      font-family: monospace;
+      font-size: 0.83rem;
+      color: var(--text);
+    }
+
+    /* ── Sentry-specific ── */
+    .sentry-intro {
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 1rem 1.25rem;
+      margin-bottom: 1.25rem;
+      font-size: 0.88rem;
+      color: var(--muted);
+      line-height: 1.65;
+      box-shadow: 0 0 20px var(--glow);
+    }
+    .sentry-intro strong { color: var(--blush); }
+
+    .ts-0  { color: var(--safe); }
+    .ts-1, .ts-2, .ts-3, .ts-4 { color: #ffb347; }
+    .ts-5, .ts-6, .ts-7 { color: #ff6647; }
+    .ts-8, .ts-9, .ts-10 { color: var(--danger); }
+
+    tr.ts-glow td { background: rgba(255, 68, 102, 0.05); }
+
+    .ps-tip {
+      position: relative;
+      cursor: help;
+      border-bottom: 1px dashed var(--muted);
+    }
+    .ps-tip::after {
+      content: attr(data-tip);
+      position: absolute;
+      bottom: 130%;
+      left: 50%;
+      transform: translateX(-50%);
+      background: #210d2c;
+      color: var(--text);
+      font-size: 0.73rem;
+      padding: 0.4rem 0.75rem;
+      border-radius: 7px;
+      border: 1px solid var(--border);
+      white-space: nowrap;
+      pointer-events: none;
+      opacity: 0;
+      transition: opacity 0.18s;
+      z-index: 100;
+    }
+    .ps-tip:hover::after { opacity: 1; }
+
+    /* ── Globe (Tab 4) ── */
+    #globe-wrap {
+      position: relative;
+      height: 580px;
+      border-radius: 14px;
+      overflow: hidden;
+      border: 1px solid var(--border);
+      box-shadow: 0 0 40px rgba(255, 110, 180, 0.1);
+    }
+    #globe-el { width: 100%; height: 100%; }
+
+    .globe-legend {
+      position: absolute;
+      bottom: 1rem;
+      left: 1rem;
+      background: rgba(13, 10, 18, 0.88);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 0.65rem 0.9rem;
+      backdrop-filter: blur(10px);
+    }
+    .globe-legend .leg-title {
+      font-family: 'Orbitron', monospace;
+      font-size: 0.6rem;
+      letter-spacing: 0.12em;
+      color: var(--muted);
+      margin-bottom: 0.45rem;
+      text-transform: uppercase;
+    }
+    .leg-row {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      font-size: 0.73rem;
+      color: var(--muted);
+      margin-bottom: 0.28rem;
+    }
+    .leg-dot {
+      width: 9px; height: 9px;
+      border-radius: 50%;
+      flex-shrink: 0;
+    }
+
+    #globe-tt {
+      position: absolute;
+      top: 1rem; right: 1rem;
+      background: rgba(26, 16, 37, 0.96);
+      border: 1px solid var(--border);
+      border-radius: 11px;
+      padding: 0.8rem 1rem;
+      display: none;
+      max-width: 230px;
+      backdrop-filter: blur(10px);
+      z-index: 10;
+    }
+    #globe-tt .tt-name {
+      font-family: 'Orbitron', monospace;
+      font-size: 0.8rem;
+      color: var(--blush);
+      margin-bottom: 0.45rem;
+    }
+    #globe-tt .tt-row {
+      display: flex;
+      justify-content: space-between;
+      gap: 0.75rem;
+      font-size: 0.75rem;
+      color: var(--muted);
+      margin-bottom: 0.12rem;
+    }
+    #globe-tt .tt-val { color: var(--text); white-space: nowrap; }
+    #globe-tt .tt-close {
+      font-size: 0.65rem;
+      color: var(--muted);
+      text-align: right;
+      margin-top: 0.45rem;
+      cursor: pointer;
+    }
+    #globe-tt .tt-close:hover { color: var(--pink); }
+
+    .globe-hint {
+      position: absolute;
+      top: 1rem;
+      left: 50%;
+      transform: translateX(-50%);
+      background: rgba(13, 10, 18, 0.8);
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      padding: 0.3rem 0.9rem;
+      font-size: 0.72rem;
+      color: var(--muted);
+      backdrop-filter: blur(6px);
+      pointer-events: none;
+    }
+
+    /* ── Loading ── */
+    .spinner-wrap {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      padding: 3rem;
+    }
+    .spinner {
+      width: 38px; height: 38px;
+      border: 3px solid rgba(255, 110, 180, 0.2);
+      border-top-color: var(--pink);
+      border-radius: 50%;
+      animation: spin 0.75s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    .shimmer {
+      background: linear-gradient(90deg,
+        rgba(255,110,180,0.05) 25%,
+        rgba(255,110,180,0.1) 50%,
+        rgba(255,110,180,0.05) 75%
+      );
+      background-size: 200% 100%;
+      animation: shimmer 1.5s infinite;
+      border-radius: 12px;
+      height: 78px;
+    }
+    @keyframes shimmer { to { background-position: -200% 0; } }
+
+    /* ── Error ── */
+    .err-card {
+      background: rgba(255, 68, 102, 0.08);
+      border: 1px solid rgba(255, 68, 102, 0.28);
+      border-radius: 14px;
+      padding: 1.75rem;
+      text-align: center;
+    }
+    .err-title {
+      font-family: 'Orbitron', monospace;
+      font-size: 0.95rem;
+      color: #ff7788;
+      margin-bottom: 0.45rem;
+    }
+    .err-msg { font-size: 0.84rem; color: var(--muted); margin-bottom: 1rem; }
+
+    /* ── Responsive ── */
+    @media (max-width: 600px) {
+      .stat-row { grid-template-columns: repeat(2, 1fr); }
+      .ast-stats { grid-template-columns: repeat(2, 1fr); }
+      #globe-wrap { height: 400px; }
+      .tab-btn { font-size: 0.62rem; padding: 0.6rem 0.8rem; }
+      .controls { gap: 0.7rem; }
+    }
+  </style>
+</head>
+<body>
+
+<canvas id="starfield"></canvas>
+
+<div id="app">
+  <header>
+    <h1>✦ NEO TRACKER ✦</h1>
+    <p class="subtitle">Near-Earth Object Close Approach Dashboard</p>
+  </header>
+
+  <nav class="tabs">
+    <button class="tab-btn active" data-tab="thisweek">🪐 This Week</button>
+    <button class="tab-btn" data-tab="explorer">🔭 Approach Explorer</button>
+    <button class="tab-btn" data-tab="sentry">⚠️ Sentry Watch</button>
+    <button class="tab-btn" data-tab="globe">🌍 3D Globe</button>
+  </nav>
+
+  <!-- ══════════════ TAB 1: THIS WEEK ══════════════ -->
+  <div id="thisweek" class="tab-panel active">
+    <div class="controls">
+      <div class="ctrl-group">
+        <label for="w-start">Start Date</label>
+        <input type="date" id="w-start">
+      </div>
+      <div class="ctrl-group">
+        <label for="w-end">End Date <span style="color:var(--muted);font-family:Inter">(max 7 days)</span></label>
+        <input type="date" id="w-end">
+      </div>
+      <button class="btn" onclick="loadThisWeek()">Load</button>
+    </div>
+    <div id="w-stats" class="stat-row"></div>
+    <div id="w-list"></div>
+  </div>
+
+  <!-- ══════════════ TAB 2: EXPLORER ══════════════ -->
+  <div id="explorer" class="tab-panel">
+    <div class="controls">
+      <div class="ctrl-group">
+        <label for="ex-start">Start Date</label>
+        <input type="date" id="ex-start">
+      </div>
+      <div class="ctrl-group">
+        <label for="ex-end">End Date</label>
+        <input type="date" id="ex-end">
+      </div>
+      <div class="ctrl-group">
+        <label for="ex-dist">Max Distance: <strong id="ex-dist-lbl" style="color:var(--pink)">5.0</strong> LD</label>
+        <input type="range" id="ex-dist" min="0.5" max="10" step="0.5" value="5">
+      </div>
+      <div class="ctrl-group">
+        <label for="ex-diam">Min Diameter (m)</label>
+        <input type="number" id="ex-diam" placeholder="Any" min="0" style="width:100px">
+      </div>
+      <div class="ctrl-group">
+        <label for="ex-sort">Sort By</label>
+        <select id="ex-sort">
+          <option value="dist">Closest Approach</option>
+          <option value="h">Largest Object</option>
+          <option value="v-rel">Fastest</option>
+          <option value="date">Soonest</option>
+        </select>
+      </div>
+      <button class="btn" onclick="searchExplorer()">Search</button>
+    </div>
+    <div id="ex-results"></div>
+  </div>
+
+  <!-- ══════════════ TAB 3: SENTRY ══════════════ -->
+  <div id="sentry" class="tab-panel">
+    <div class="sentry-intro">
+      <strong>JPL Sentry</strong> is NASA's automated impact monitoring system that continuously
+      scans the asteroid catalog for future Earth impact possibilities. <strong>The vast
+      majority of objects listed here have extremely low probabilities</strong> — they appear
+      here for scientific completeness, not because they pose a real threat.
+    </div>
+    <div id="s-stats" class="stat-row"></div>
+    <div id="s-list"></div>
+  </div>
+
+  <!-- ══════════════ TAB 4: GLOBE ══════════════ -->
+  <div id="globe" class="tab-panel">
+    <div id="globe-wrap">
+      <div id="globe-el"></div>
+      <div class="globe-hint">Drag to rotate · Scroll to zoom · Click asteroid to inspect</div>
+      <div class="globe-legend">
+        <div class="leg-title">Legend</div>
+        <div class="leg-row">
+          <div class="leg-dot" style="background:#ff4466;box-shadow:0 0 5px #ff4466"></div>
+          Potentially Hazardous
+        </div>
+        <div class="leg-row">
+          <div class="leg-dot" style="background:#c084fc;box-shadow:0 0 5px #c084fc"></div>
+          Safe Flyby
+        </div>
+        <div class="leg-row">
+          <div class="leg-dot" style="background:#e0e0f0;box-shadow:0 0 5px #e0e0f0"></div>
+          🌕 Moon (1 LD)
+        </div>
+      </div>
+      <div id="globe-tt">
+        <div class="tt-name" id="tt-name"></div>
+        <div class="tt-row"><span>Date</span><span class="tt-val" id="tt-date"></span></div>
+        <div class="tt-row"><span>Distance</span><span class="tt-val" id="tt-dist"></span></div>
+        <div class="tt-row"><span>Diameter</span><span class="tt-val" id="tt-diam"></span></div>
+        <div class="tt-row"><span>Velocity</span><span class="tt-val" id="tt-vel"></span></div>
+        <div class="tt-row"><span>Status</span><span class="tt-val" id="tt-status"></span></div>
+        <div class="tt-close" onclick="document.getElementById('globe-tt').style.display='none'">✕ close</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+// ════════════════════════════════════════════════════════════════
+// NASA API Key — swap "DEMO_KEY" for your personal key to raise
+// rate limits. Get a free key at https://api.nasa.gov
+const NASA_API_KEY = "ggARvbZhr5WVy4CfViD5x02YXjiMig5Mei5IEcll";
+// ════════════════════════════════════════════════════════════════
+
+const AU_TO_KM  = 149597870.7;
+const LD_TO_KM  = 384400;
+const AU_TO_LD  = AU_TO_KM / LD_TO_KM; // ≈ 389.17
+
+// ──────────────────────────────────────────────────────────────
+// UTILITIES
+// ──────────────────────────────────────────────────────────────
+
+// Maps estimated asteroid diameter (meters) to a fun size analogy.
+function sizeAnalogy(m) {
+  if (m < 10)   return "a large SUV";
+  if (m < 25)   return "a house";
+  if (m < 50)   return "a city block";
+  if (m < 100)  return "the Eiffel Tower";
+  if (m < 250)  return "a skyscraper";
+  if (m < 500)  return "the Empire State Building";
+  if (m < 1000) return "a small mountain";
+  if (m < 5000) return "a large city";
+  return "a continent-ender";
+}
+
+function auToLD(au)  { return parseFloat(au) * AU_TO_LD; }
+function auToKm(au)  { return parseFloat(au) * AU_TO_KM; }
+
+function fmtKm(km) {
+  if (km >= 1e6) return (km / 1e6).toFixed(2) + "M km";
+  if (km >= 1e3) return (km / 1e3).toFixed(1) + "k km";
+  return km.toFixed(0) + " km";
+}
+
+function fmtProb(ip) {
+  const p = parseFloat(ip);
+  if (!p || isNaN(p)) return "—";
+  const oneIn = Math.round(1 / p);
+  return `1 in ${oneIn.toLocaleString()} (${(p * 100).toExponential(2)}%)`;
+}
+
+function getToday()  { return new Date().toISOString().slice(0, 10); }
+
+function addDays(d, n) {
+  const dt = new Date(d); dt.setDate(dt.getDate() + n);
+  return dt.toISOString().slice(0, 10);
+}
+function addMonths(d, n) {
+  const dt = new Date(d); dt.setMonth(dt.getMonth() + n);
+  return dt.toISOString().slice(0, 10);
+}
+
+// Deterministic lat/lng from asteroid ID so dots don't jump on re-render.
+function seededPos(id) {
+  let h1 = 0x811c9dc5, h2 = 0xdeadbeef;
+  for (let i = 0; i < id.length; i++) {
+    const c = id.charCodeAt(i);
+    h1 = (Math.imul(h1 ^ c, 0x01000193) >>> 0);
+    h2 = (Math.imul(h2 ^ c, 0x811c9dc5) >>> 0);
+  }
+  return { lat: (h1 / 0xFFFFFFFF) * 180 - 90, lng: (h2 / 0xFFFFFFFF) * 360 - 180 };
+}
+
+// Compressed log scale: 0 LD → alt 0, 1 LD → alt 0.20, 10+ LD → alt ≤ 0.60
+function ldToAlt(ld) {
+  if (ld <= 0) return 0;
+  return Math.min(0.60, 0.20 * Math.log10(ld + 1) / Math.log10(2));
+}
+
+function showSpinner(id) {
+  document.getElementById(id).innerHTML =
+    `<div class="spinner-wrap"><div class="spinner"></div></div>`;
+}
+function showShimmer(id, n = 4) {
+  document.getElementById(id).innerHTML =
+    Array(n).fill('<div class="shimmer" style="margin-bottom:.6rem"></div>').join('');
+}
+function showError(id, msg, retryFn) {
+  document.getElementById(id).innerHTML = `
+    <div class="err-card">
+      <div class="err-title">⚠ Data Unavailable</div>
+      <div class="err-msg">${msg}</div>
+      ${retryFn ? `<button class="btn" onclick="${retryFn}()" style="margin-top:.25rem">Retry</button>` : ''}
+    </div>`;
+}
+
+// ──────────────────────────────────────────────────────────────
+// STAR FIELD
+// ──────────────────────────────────────────────────────────────
+function initStarfield() {
+  const canvas = document.getElementById('starfield');
+  const ctx    = canvas.getContext('2d');
+  let stars    = [];
+
+  function resize() { canvas.width = innerWidth; canvas.height = innerHeight; }
+
+  function mkStars() {
+    stars = Array.from({ length: 220 }, () => ({
+      x: Math.random() * canvas.width,
+      y: Math.random() * canvas.height,
+      r: Math.random() * 1.4 + 0.2,
+      base: Math.random() * 0.6 + 0.1,
+      spd: Math.random() * 0.12 + 0.02,
+      tw: Math.random() * 0.025 + 0.004,
+      off: Math.random() * Math.PI * 2,
+    }));
+  }
+
+  let f = 0;
+  function draw() {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    f++;
+    stars.forEach(s => {
+      const twinkle = 0.5 + 0.5 * Math.sin(f * s.tw + s.off);
+      ctx.beginPath();
+      ctx.arc(s.x, s.y, s.r, 0, Math.PI * 2);
+      ctx.fillStyle = `rgba(255,220,240,${s.base * twinkle})`;
+      ctx.fill();
+      s.y += s.spd;
+      if (s.y > canvas.height) { s.y = 0; s.x = Math.random() * canvas.width; }
+    });
+    requestAnimationFrame(draw);
+  }
+
+  resize(); mkStars(); draw();
+  window.addEventListener('resize', () => { resize(); mkStars(); });
+}
+
+// ──────────────────────────────────────────────────────────────
+// TAB NAVIGATION
+// ──────────────────────────────────────────────────────────────
+let globeReady = false;
+
+function initTabs() {
+  document.querySelectorAll('.tab-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+      document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+      btn.classList.add('active');
+      document.getElementById(btn.dataset.tab).classList.add('active');
+      if (btn.dataset.tab === 'globe' && !globeReady) {
+        globeReady = true;
+        initGlobe();
+      }
+    });
+  });
+}
+
+// ──────────────────────────────────────────────────────────────
+// TAB 1: THIS WEEK  (NeoWs)
+// ──────────────────────────────────────────────────────────────
+let neowsAsteroids = []; // shared with Tab 4
+
+async function loadThisWeek() {
+  const si = document.getElementById('w-start');
+  const ei = document.getElementById('w-end');
+  const today = getToday();
+  if (!si.value) si.value = today;
+  if (!ei.value) ei.value = addDays(today, 6);
+
+  // Enforce 7-day window
+  let start = si.value, end = ei.value;
+  const diff = (new Date(end) - new Date(start)) / 86400000;
+  if (diff < 0 || diff > 7) { end = addDays(start, 6); ei.value = end; }
+
+  showShimmer('w-stats', 4);
+  showSpinner('w-list');
+
+  try {
+    const url = `https://api.nasa.gov/neo/rest/v1/feed?start_date=${start}&end_date=${end}&api_key=${NASA_API_KEY}`;
+    const res  = await fetch(url);
+    if (res.status === 429) throw new Error('Rate limit reached. DEMO_KEY allows 30 requests/hour. Get a free key at api.nasa.gov');
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const json = await res.json();
+    if (json.error) throw new Error(json.error.message || 'API error');
+
+    neowsAsteroids = [];
+    Object.values(json.near_earth_objects || {}).forEach(day => {
+      day.forEach(ast => {
+        const ca = ast.close_approach_data[0];
+        neowsAsteroids.push({
+          id:       ast.id,
+          name:     ast.name,
+          pha:      ast.is_potentially_hazardous_asteroid,
+          diamMinKm: ast.estimated_diameter.kilometers.estimated_diameter_min,
+          diamMaxKm: ast.estimated_diameter.kilometers.estimated_diameter_max,
+          date:     ca.close_approach_date_full || ca.close_approach_date,
+          distLD:   parseFloat(ca.miss_distance.lunar),
+          distKm:   parseFloat(ca.miss_distance.kilometers),
+          vel:      parseFloat(ca.relative_velocity.kilometers_per_second),
+        });
+      });
+    });
+    neowsAsteroids.sort((a, b) => new Date(a.date) - new Date(b.date));
+
+    renderWeekStats();
+    renderWeekList();
+    if (globeReady) renderGlobe();
+
+  } catch(e) {
+    document.getElementById('w-stats').innerHTML = '';
+    showError('w-list', e.message, 'loadThisWeek');
+  }
+}
+
+function renderWeekStats() {
+  const a = neowsAsteroids;
+  if (!a.length) { document.getElementById('w-stats').innerHTML = ''; return; }
+
+  const closest = [...a].sort((x,y) => x.distLD - y.distLD)[0];
+  const largest  = [...a].sort((x,y) => y.diamMaxKm - x.diamMaxKm)[0];
+  const fastest  = [...a].sort((x,y) => y.vel - x.vel)[0];
+  const hazCount = a.filter(x => x.pha).length;
+
+  document.getElementById('w-stats').innerHTML = `
+    <div class="stat-card">
+      <div class="stat-label">Closest Approach</div>
+      <div class="stat-value">${closest.distLD.toFixed(2)} LD</div>
+      <div class="stat-name">${closest.name}</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">Largest Asteroid</div>
+      <div class="stat-value">${(largest.diamMaxKm * 1000).toFixed(0)} m</div>
+      <div class="stat-name">${largest.name}</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">Fastest Flyby</div>
+      <div class="stat-value">${fastest.vel.toFixed(1)} km/s</div>
+      <div class="stat-name">${fastest.name}</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">Total Flybys</div>
+      <div class="stat-value">${a.length}</div>
+      <div class="stat-name">${hazCount} potentially hazardous</div>
+    </div>
+  `;
+}
+
+function renderWeekList() {
+  const el = document.getElementById('w-list');
+  if (!neowsAsteroids.length) {
+    el.innerHTML = `<div class="err-card" style="background:rgba(255,110,180,0.05);border-color:var(--border)">
+      <div class="err-title" style="color:var(--blush)">No Results</div>
+      <div class="err-msg">No close approaches found for this date range.</div>
+    </div>`;
+    return;
+  }
+
+  el.innerHTML = `
+    <div class="section-title">Close Approaches (${neowsAsteroids.length})</div>
+    <div class="asteroid-list">
+      ${neowsAsteroids.map(a => {
+        const avgM = ((a.diamMinKm + a.diamMaxKm) / 2) * 1000;
+        return `
+        <div class="asteroid-card ${a.pha ? 'pha' : ''}">
+          <div class="ast-header">
+            <div>
+              <div class="ast-name">${a.name}</div>
+              <div class="ast-date">${a.date}</div>
+            </div>
+            <span class="badge ${a.pha ? 'badge-pha' : 'badge-safe'}">
+              ${a.pha ? '⚠ Potentially Hazardous' : '✓ Safe Flyby'}
+            </span>
+          </div>
+          <div class="ast-stats">
+            <div class="ast-stat">
+              <div class="ast-key">Miss Distance</div>
+              <div class="ast-val">${a.distLD.toFixed(3)} LD</div>
+              <div class="ast-sub">${fmtKm(a.distKm)}</div>
+            </div>
+            <div class="ast-stat">
+              <div class="ast-key">Diameter</div>
+              <div class="ast-val">${(a.diamMinKm*1000).toFixed(0)}–${(a.diamMaxKm*1000).toFixed(0)} m</div>
+              <div class="ast-sub">~${sizeAnalogy(avgM)}</div>
+            </div>
+            <div class="ast-stat">
+              <div class="ast-key">Velocity</div>
+              <div class="ast-val">${a.vel.toFixed(2)} km/s</div>
+              <div class="ast-sub">${(a.vel * 3600).toFixed(0)} km/h</div>
+            </div>
+          </div>
+        </div>`;
+      }).join('')}
+    </div>
+  `;
+}
+
+// ──────────────────────────────────────────────────────────────
+// TAB 2: APPROACH EXPLORER  (JPL SBDB CAD)
+// ──────────────────────────────────────────────────────────────
+let explorerRows = [];
+let exSort = { col: null, asc: true };
+
+function initExplorer() {
+  const today = getToday();
+  document.getElementById('ex-start').value = today;
+  document.getElementById('ex-end').value   = addMonths(today, 12);
+  document.getElementById('ex-dist').addEventListener('input', function () {
+    document.getElementById('ex-dist-lbl').textContent = parseFloat(this.value).toFixed(1);
+  });
+}
+
+async function searchExplorer() {
+  const start  = document.getElementById('ex-start').value;
+  const end    = document.getElementById('ex-end').value;
+  const distLD = parseFloat(document.getElementById('ex-dist').value);
+  const diamM  = document.getElementById('ex-diam').value;
+  const sort   = document.getElementById('ex-sort').value;
+
+  const distAU = (distLD * LD_TO_KM / AU_TO_KM).toFixed(7);
+  const diamKm = diamM ? (parseFloat(diamM) / 1000).toString() : null;
+
+  let url = `https://ssd-api.jpl.nasa.gov/cad.api?body=Earth&date-min=${start}&date-max=${end}&dist-max=${distAU}&sort=${sort}&limit=500`;
+  if (diamKm) url += `&diameter=${diamKm}`;
+
+  showSpinner('ex-results');
+
+  try {
+    const res  = await fetch(url);
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const json = await res.json();
+
+    if (!json.data || json.data.length === 0) {
+      document.getElementById('ex-results').innerHTML = `
+        <div class="err-card" style="background:rgba(255,110,180,0.05);border-color:var(--border)">
+          <div class="err-title" style="color:var(--blush)">No Results</div>
+          <div class="err-msg">No close approaches match your filters. Try widening the distance or date range.</div>
+        </div>`;
+      return;
+    }
+
+    // Map field-index array to objects
+    explorerRows = json.data.map(row => {
+      const obj = {};
+      json.fields.forEach((f, i) => obj[f] = row[i]);
+      return obj;
+    });
+    exSort = { col: null, asc: true };
+
+    renderExplorerTable(explorerRows, json.count);
+
+  } catch(e) {
+    showError('ex-results', `Could not load SBDB data: ${e.message}`, 'searchExplorer');
+  }
+}
+
+function renderExplorerTable(rows, totalCount) {
+  document.getElementById('ex-results').innerHTML = `
+    <p class="results-count">Showing <strong>${rows.length}</strong> of <strong>${totalCount || rows.length}</strong> approaches</p>
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th onclick="exSortBy('fullname')">Object</th>
+            <th onclick="exSortBy('cd')">Date</th>
+            <th onclick="exSortBy('dist')">Distance</th>
+            <th onclick="exSortBy('diameter')">Diameter</th>
+            <th onclick="exSortBy('v_rel')">Velocity</th>
+            <th onclick="exSortBy('h')">H mag</th>
+          </tr>
+        </thead>
+        <tbody id="ex-tbody"></tbody>
+      </table>
+    </div>
+  `;
+  renderExplorerRows(rows);
+}
+
+function renderExplorerRows(rows) {
+  const tbody = document.getElementById('ex-tbody');
+  if (!tbody) return;
+  tbody.innerHTML = rows.map((r, i) => {
+    const des       = r.des || '—';
+    const name      = r.fullname || des;
+    const distLD    = r.dist ? auToLD(r.dist).toFixed(3) : '—';
+    const distKmFmt = r.dist ? fmtKm(auToKm(r.dist)) : '—';
+    const dKm       = r.diameter ? parseFloat(r.diameter) : null;
+    const dM        = dKm ? dKm * 1000 : null;
+    const velFmt    = r.v_rel ? parseFloat(r.v_rel).toFixed(2) + ' km/s' : '—';
+    const hFmt      = r.h ? parseFloat(r.h).toFixed(1) : '—';
+    const jpl       = `https://ssd.jpl.nasa.gov/tools/sbdb_lookup.html#/?sstr=${encodeURIComponent(des)}`;
+
+    return `
+      <tr data-i="${i}" onclick="toggleExRow(this,${i})">
+        <td><a href="${jpl}" target="_blank" onclick="event.stopPropagation()">${name}</a></td>
+        <td>${r.cd || '—'}</td>
+        <td class="mono">${distLD} LD<span class="sub">${distKmFmt}</span></td>
+        <td>${dKm ? `${dKm.toFixed(3)} km<span class="sub">~${sizeAnalogy(dM)}</span>` : '<span style="color:var(--muted)">unknown</span>'}</td>
+        <td class="mono">${velFmt}</td>
+        <td>${hFmt}</td>
+      </tr>`;
+  }).join('');
+}
+
+function toggleExRow(tr, i) {
+  const next = tr.nextElementSibling;
+  if (next && next.classList.contains('exp-row')) { next.remove(); return; }
+  const r = explorerRows[i];
+  const fields = Object.entries(r).filter(([,v]) => v != null);
+  const expTr = document.createElement('tr');
+  expTr.className = 'exp-row';
+  expTr.innerHTML = `<td colspan="6">
+    <div class="exp-detail">
+      ${fields.map(([k,v]) => `
+        <div class="exp-detail-item">
+          <div class="dk">${k}</div>
+          <div class="dv">${v}</div>
+        </div>`).join('')}
+    </div>
+  </td>`;
+  tr.after(expTr);
+}
+
+function exSortBy(col) {
+  exSort.asc = (exSort.col === col) ? !exSort.asc : true;
+  exSort.col = col;
+  const sorted = [...explorerRows].sort((a, b) => {
+    let va = a[col], vb = b[col];
+    if (va == null) return 1;
+    if (vb == null) return -1;
+    const na = parseFloat(va), nb = parseFloat(vb);
+    if (!isNaN(na) && !isNaN(nb)) { va = na; vb = nb; }
+    return (va < vb ? -1 : va > vb ? 1 : 0) * (exSort.asc ? 1 : -1);
+  });
+  renderExplorerRows(sorted);
+}
+
+// ──────────────────────────────────────────────────────────────
+// TAB 3: SENTRY WATCH LIST  (JPL Sentry)
+// ──────────────────────────────────────────────────────────────
+let sentryRows = [];
+let sSort = { col: 'ip', asc: false };
+
+async function loadSentry() {
+  showShimmer('s-stats', 3);
+  showSpinner('s-list');
+
+  try {
+    const res  = await fetch('https://ssd-api.jpl.nasa.gov/sentry.api?all=1');
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const json = await res.json();
+    sentryRows = json.data || [];
+
+    renderSentryStats();
+    // Default sort: impact probability descending
+    const sorted = [...sentryRows].sort((a, b) => parseFloat(b.ip) - parseFloat(a.ip));
+    renderSentryTable(sorted);
+
+  } catch(e) {
+    document.getElementById('s-stats').innerHTML = '';
+    showError('s-list', `Could not load Sentry data: ${e.message}`, 'loadSentry');
+  }
+}
+
+function renderSentryStats() {
+  if (!sentryRows.length) { document.getElementById('s-stats').innerHTML = ''; return; }
+  const byTS = [...sentryRows].sort((a,b) => parseInt(b.ts_max) - parseInt(a.ts_max))[0];
+  const byIP = [...sentryRows].sort((a,b) => parseFloat(b.ip)   - parseFloat(a.ip))[0];
+
+  document.getElementById('s-stats').innerHTML = `
+    <div class="stat-card">
+      <div class="stat-label">Objects on Watch</div>
+      <div class="stat-value">${sentryRows.length}</div>
+      <div class="stat-name">Active Sentry entries</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">Highest Torino Scale</div>
+      <div class="stat-value ts-${byTS.ts_max || 0}">${byTS.ts_max || 0}</div>
+      <div class="stat-name">${byTS.name || byTS.des}</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">Highest Impact Prob.</div>
+      <div class="stat-value" style="font-size:1rem">${(parseFloat(byIP.ip)*100).toExponential(1)}%</div>
+      <div class="stat-name">${byIP.name || byIP.des}</div>
+    </div>
+  `;
+}
+
+function renderSentryTable(rows) {
+  document.getElementById('s-list').innerHTML = `
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th onclick="sentrySort('des')">Designation ↕</th>
+            <th onclick="sentrySort('diameter')">Diameter ↕</th>
+            <th onclick="sentrySort('ip')">Impact Prob. ↕</th>
+            <th onclick="sentrySort('ps_cum')">Palermo Scale ↕</th>
+            <th onclick="sentrySort('ts_max')">Torino ↕</th>
+            <th onclick="sentrySort('v_inf')">Velocity ↕</th>
+            <th onclick="sentrySort('n_imp')"># Solutions ↕</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${rows.map(r => {
+            const ts  = parseInt(r.ts_max) || 0;
+            const ps  = parseFloat(r.ps_cum);
+            const glow = ts >= 1;
+            const tc  = ts === 0 ? 'var(--safe)' : ts <= 4 ? '#ffb347' : ts <= 7 ? '#ff6647' : 'var(--danger)';
+            const jpl = `https://ssd.jpl.nasa.gov/tools/sbdb_lookup.html#/?sstr=${encodeURIComponent(r.des)}`;
+
+            return `
+            <tr class="${glow ? 'ts-glow' : ''}" style="${ts===0?'opacity:0.78':''}">
+              <td>
+                <a href="${jpl}" target="_blank">${r.name || r.des}</a>
+                ${r.name ? `<span class="sub">${r.des}</span>` : ''}
+              </td>
+              <td>${r.diameter ? parseFloat(r.diameter).toFixed(3)+' km' : '—'}</td>
+              <td class="mono" style="font-size:0.8rem">${fmtProb(r.ip)}</td>
+              <td>
+                <span class="ps-tip" data-tip="Palermo Scale: −2 or below = routine background, 0 or above = warrants attention">
+                  ${isNaN(ps) ? '—' : ps.toFixed(2)}
+                </span>
+              </td>
+              <td><strong style="color:${tc};font-size:1rem">${ts}</strong></td>
+              <td class="mono">${r.v_inf ? parseFloat(r.v_inf).toFixed(2)+' km/s' : '—'}</td>
+              <td>${r.n_imp || '—'}</td>
+            </tr>`;
+          }).join('')}
+        </tbody>
+      </table>
+    </div>
+  `;
+}
+
+function sentrySort(col) {
+  sSort.asc = (sSort.col === col) ? !sSort.asc : (col === 'ip' ? false : true);
+  sSort.col = col;
+  const sorted = [...sentryRows].sort((a, b) => {
+    let va = a[col], vb = b[col];
+    if (va == null) return 1;
+    if (vb == null) return -1;
+    const na = parseFloat(va), nb = parseFloat(vb);
+    if (!isNaN(na) && !isNaN(nb)) { va = na; vb = nb; }
+    return (va < vb ? -1 : va > vb ? 1 : 0) * (sSort.asc ? 1 : -1);
+  });
+  renderSentryTable(sorted);
+}
+
+// ──────────────────────────────────────────────────────────────
+// TAB 4: 3D GLOBE  (globe.gl + NeoWs data)
+// ──────────────────────────────────────────────────────────────
+let globe = null;
+
+function initGlobe() {
+  const el = document.getElementById('globe-el');
+
+  if (!window.Globe) {
+    document.getElementById('globe-wrap').innerHTML = `
+      <div class="err-card" style="height:100%;display:flex;flex-direction:column;justify-content:center;align-items:center;border-radius:14px">
+        <div class="err-title">Globe Unavailable</div>
+        <div class="err-msg">Could not load globe.gl. Check your internet connection.</div>
+      </div>`;
+    return;
+  }
+
+  globe = Globe()(el)
+    .backgroundColor('#0d0a12')
+    .atmosphereColor('#ff6eb4')
+    .atmosphereAltitude(0.15)
+    .globeImageUrl('https://unpkg.com/three-globe/example/img/earth-dark.jpg')
+    .onPointClick(pt => {
+      if (!pt || pt._moon) return;
+      const tt = document.getElementById('globe-tt');
+      document.getElementById('tt-name').textContent   = pt.name;
+      document.getElementById('tt-date').textContent   = pt.date;
+      document.getElementById('tt-dist').textContent   = `${pt.distLD.toFixed(3)} LD (${fmtKm(pt.distKm)})`;
+      document.getElementById('tt-diam').textContent   =
+        `${(pt.diamMinKm*1000).toFixed(0)}–${(pt.diamMaxKm*1000).toFixed(0)} m`;
+      document.getElementById('tt-vel').textContent    = `${pt.vel.toFixed(2)} km/s`;
+      const statusEl = document.getElementById('tt-status');
+      statusEl.textContent = pt.pha ? '⚠ Potentially Hazardous' : '✓ Safe Flyby';
+      statusEl.style.color = pt.pha ? 'var(--danger)' : 'var(--safe)';
+      tt.style.display = 'block';
+    })
+    .onPointHover(pt => { el.style.cursor = pt ? 'pointer' : 'default'; });
+
+  // Auto-rotate; pause on drag, resume after 2 s
+  const ctrl = globe.controls();
+  ctrl.autoRotate      = true;
+  ctrl.autoRotateSpeed = 0.4;
+  ctrl.addEventListener('start', () => { ctrl.autoRotate = false; });
+  ctrl.addEventListener('end',   () => { setTimeout(() => { ctrl.autoRotate = true; }, 2000); });
+
+  renderGlobe();
+}
+
+function renderGlobe() {
+  if (!globe) return;
+
+  // Moon reference marker at exactly 1 LD altitude
+  const moon = [{
+    _moon: true, name: '🌕 Moon (1 LD)',
+    lat: 23.5, lng: 45, alt: ldToAlt(1),
+    color: '#e0e0f0', size: 0.55,
+  }];
+
+  const pts = neowsAsteroids.map(a => {
+    const { lat, lng } = seededPos(a.id);
+    return { ...a, lat, lng, alt: ldToAlt(a.distLD), color: a.pha ? '#ff4466' : '#c084fc', size: a.pha ? 0.55 : 0.38 };
+  });
+
+  const all = [...moon, ...pts];
+
+  globe
+    .pointsData(all)
+    .pointLat('lat')
+    .pointLng('lng')
+    .pointAltitude('alt')
+    .pointColor('color')
+    .pointRadius('size')
+    .pointLabel(d => d._moon ? '🌕 Moon (1 LD)' : `${d.name}<br>${d.distLD?.toFixed(2)} LD`);
+
+  // If no NeoWs data yet, show a hint
+  if (!neowsAsteroids.length) {
+    const hint = document.createElement('div');
+    hint.style.cssText = 'position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);text-align:center;color:var(--muted);font-size:0.9rem;pointer-events:none';
+    hint.innerHTML = '<div style="font-family:Orbitron,monospace;font-size:0.8rem;color:var(--blush);margin-bottom:.5rem">No asteroid data</div>Load the 🪐 This Week tab first to populate the globe.';
+    document.getElementById('globe-wrap').appendChild(hint);
+  }
+}
+
+// ──────────────────────────────────────────────────────────────
+// INIT
+// ──────────────────────────────────────────────────────────────
+document.addEventListener('DOMContentLoaded', () => {
+  initStarfield();
+  initTabs();
+  initExplorer();
+
+  // Default dates for Tab 1
+  const today = getToday();
+  document.getElementById('w-start').value = today;
+  document.getElementById('w-end').value   = addDays(today, 6);
+
+  // Fetch on load
+  loadThisWeek();
+  loadSentry();
+});
+</script>
+</body>
+</html>
