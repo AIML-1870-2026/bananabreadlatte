@@ -1,0 +1,1395 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>🌸 LLM Switchboard</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Quicksand:wght@400;500;600;700&family=Inter:wght@400;500&display=swap" rel="stylesheet" />
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/atom-one-light.min.css" />
+<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg: #fff0f3;
+    --surface: #ffffff;
+    --primary: #f472b6;
+    --primary-dark: #db2777;
+    --accent: #fbcfe8;
+    --accent2: #fce7f3;
+    --text: #4a1942;
+    --text-muted: #9b6b95;
+    --border: #f9a8d4;
+    --success: #86efac;
+    --error: #fda4af;
+    --warning: #fde68a;
+    --shadow: 0 4px 20px rgba(244,114,182,0.12);
+    --shadow-hover: 0 8px 30px rgba(244,114,182,0.22);
+    --radius: 18px;
+    --radius-sm: 10px;
+    --radius-pill: 999px;
+  }
+
+  body {
+    font-family: 'Inter', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    font-size: 14px;
+  }
+
+  h1, h2, h3, .label-font {
+    font-family: 'Quicksand', sans-serif;
+  }
+
+  /* ── HEADER ── */
+  header {
+    background: linear-gradient(135deg, #f9a8d4 0%, #f472b6 40%, #e879a8 100%);
+    padding: 16px 28px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    box-shadow: 0 2px 16px rgba(244,114,182,0.3);
+    position: sticky;
+    top: 0;
+    z-index: 100;
+  }
+  header h1 {
+    color: #fff;
+    font-size: 1.5rem;
+    font-weight: 700;
+    letter-spacing: -0.5px;
+    text-shadow: 0 1px 4px rgba(0,0,0,0.15);
+  }
+  .compare-toggle-btn {
+    background: rgba(255,255,255,0.25);
+    border: 2px solid rgba(255,255,255,0.5);
+    color: #fff;
+    font-family: 'Quicksand', sans-serif;
+    font-weight: 600;
+    font-size: 0.85rem;
+    padding: 8px 18px;
+    border-radius: var(--radius-pill);
+    cursor: pointer;
+    transition: all 0.2s;
+    backdrop-filter: blur(4px);
+  }
+  .compare-toggle-btn:hover { background: rgba(255,255,255,0.38); transform: translateY(-1px); }
+  .compare-toggle-btn.active { background: #fff; color: var(--primary-dark); }
+
+  /* ── MAIN LAYOUT ── */
+  .app-container {
+    max-width: 900px;
+    margin: 0 auto;
+    padding: 24px 20px 48px;
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+  }
+
+  /* ── CARD ── */
+  .card {
+    background: var(--surface);
+    border: 1.5px solid var(--border);
+    border-radius: var(--radius);
+    padding: 22px 24px;
+    box-shadow: var(--shadow);
+    transition: box-shadow 0.2s;
+  }
+  .card:hover { box-shadow: var(--shadow-hover); }
+  .card-title {
+    font-family: 'Quicksand', sans-serif;
+    font-size: 0.8rem;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--primary);
+    margin-bottom: 14px;
+  }
+
+  /* ── KEYS SECTION ── */
+  .keys-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+  }
+  @media (max-width: 600px) { .keys-grid { grid-template-columns: 1fr; } }
+  .key-field label {
+    display: block;
+    font-family: 'Quicksand', sans-serif;
+    font-weight: 600;
+    font-size: 0.82rem;
+    color: var(--text-muted);
+    margin-bottom: 6px;
+  }
+  .key-input-wrap { position: relative; }
+  .key-input-wrap input {
+    width: 100%;
+    padding: 10px 40px 10px 14px;
+    border: 1.5px solid var(--border);
+    border-radius: var(--radius-sm);
+    font-family: 'Inter', monospace;
+    font-size: 0.82rem;
+    color: var(--text);
+    background: var(--accent2);
+    outline: none;
+    transition: border-color 0.2s, box-shadow 0.2s;
+  }
+  .key-input-wrap input:focus { border-color: var(--primary); box-shadow: 0 0 0 3px rgba(244,114,182,0.15); }
+  .key-input-wrap .eye-btn {
+    position: absolute;
+    right: 10px;
+    top: 50%;
+    transform: translateY(-50%);
+    background: none;
+    border: none;
+    cursor: pointer;
+    font-size: 1rem;
+    color: var(--text-muted);
+    padding: 2px;
+  }
+  .privacy-note {
+    font-size: 0.72rem;
+    color: var(--text-muted);
+    margin-top: 5px;
+    font-style: italic;
+  }
+  .upload-btn {
+    margin-top: 6px;
+    background: var(--accent);
+    border: 1.5px dashed var(--border);
+    color: var(--text-muted);
+    font-family: 'Quicksand', sans-serif;
+    font-weight: 600;
+    font-size: 0.75rem;
+    padding: 6px 12px;
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+    transition: all 0.2s;
+    display: inline-block;
+  }
+  .upload-btn:hover { background: var(--border); color: var(--text); }
+  .keys-actions { margin-top: 14px; display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+  .clear-keys-btn {
+    background: none;
+    border: 1.5px solid var(--error);
+    color: var(--primary-dark);
+    font-family: 'Quicksand', sans-serif;
+    font-weight: 600;
+    font-size: 0.78rem;
+    padding: 7px 16px;
+    border-radius: var(--radius-pill);
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+  .clear-keys-btn:hover { background: var(--error); color: #fff; }
+  .key-status { font-size: 0.75rem; color: var(--text-muted); }
+  .key-status .dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 4px; }
+  .key-status .dot.active { background: var(--success); }
+  .key-status .dot.inactive { background: #ddd; }
+
+  /* ── PROVIDER / MODEL / MODE ── */
+  .config-row {
+    display: flex;
+    gap: 16px;
+    flex-wrap: wrap;
+    align-items: flex-end;
+  }
+  .config-group { display: flex; flex-direction: column; gap: 6px; flex: 1; min-width: 140px; }
+  .config-group label {
+    font-family: 'Quicksand', sans-serif;
+    font-weight: 600;
+    font-size: 0.8rem;
+    color: var(--text-muted);
+  }
+
+  /* Provider radio pills */
+  .provider-pills { display: flex; gap: 8px; }
+  .provider-pill input { display: none; }
+  .provider-pill label {
+    padding: 8px 18px;
+    border: 1.5px solid var(--border);
+    border-radius: var(--radius-pill);
+    font-family: 'Quicksand', sans-serif;
+    font-weight: 600;
+    font-size: 0.82rem;
+    color: var(--text-muted);
+    cursor: pointer;
+    transition: all 0.2s;
+    background: var(--accent2);
+    display: block;
+  }
+  .provider-pill input:checked + label {
+    background: var(--primary);
+    border-color: var(--primary);
+    color: #fff;
+    box-shadow: 0 2px 10px rgba(244,114,182,0.35);
+  }
+  .provider-pill label:hover { border-color: var(--primary); color: var(--primary); }
+
+  select {
+    padding: 9px 14px;
+    border: 1.5px solid var(--border);
+    border-radius: var(--radius-sm);
+    font-family: 'Inter', sans-serif;
+    font-size: 0.84rem;
+    color: var(--text);
+    background: var(--accent2);
+    outline: none;
+    cursor: pointer;
+    transition: border-color 0.2s;
+    appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath d='M2 4l4 4 4-4' fill='none' stroke='%23f472b6' stroke-width='2' stroke-linecap='round'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 12px center;
+    padding-right: 32px;
+  }
+  select:focus { border-color: var(--primary); box-shadow: 0 0 0 3px rgba(244,114,182,0.15); }
+
+  /* Mode toggle */
+  .mode-toggle-wrap { display: flex; align-items: center; gap: 10px; }
+  .mode-label { font-family: 'Quicksand', sans-serif; font-size: 0.82rem; color: var(--text-muted); font-weight: 600; }
+  .mode-label.active { color: var(--primary-dark); }
+  .toggle-switch { position: relative; width: 46px; height: 24px; cursor: pointer; }
+  .toggle-switch input { display: none; }
+  .toggle-track {
+    position: absolute; inset: 0;
+    background: var(--accent);
+    border-radius: var(--radius-pill);
+    border: 1.5px solid var(--border);
+    transition: background 0.25s, border-color 0.25s;
+  }
+  .toggle-switch input:checked ~ .toggle-track { background: var(--primary); border-color: var(--primary); }
+  .toggle-thumb {
+    position: absolute;
+    top: 3px; left: 3px;
+    width: 16px; height: 16px;
+    background: #fff;
+    border-radius: 50%;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.2);
+    transition: transform 0.25s cubic-bezier(.34,1.56,.64,1);
+  }
+  .toggle-switch input:checked ~ .toggle-track .toggle-thumb { transform: translateX(22px); }
+
+  /* ── PROMPT AREA ── */
+  textarea {
+    width: 100%;
+    padding: 14px;
+    border: 1.5px solid var(--border);
+    border-radius: var(--radius-sm);
+    font-family: 'Inter', sans-serif;
+    font-size: 0.88rem;
+    color: var(--text);
+    background: var(--accent2);
+    resize: vertical;
+    min-height: 110px;
+    outline: none;
+    transition: border-color 0.2s, box-shadow 0.2s;
+    line-height: 1.6;
+  }
+  textarea:focus { border-color: var(--primary); box-shadow: 0 0 0 3px rgba(244,114,182,0.15); }
+  .schema-area { min-height: 120px; font-family: 'Courier New', monospace; font-size: 0.8rem; }
+
+  .prompt-actions { display: flex; gap: 10px; margin-top: 12px; flex-wrap: wrap; align-items: center; }
+
+  /* Example prompts */
+  .examples-wrap { position: relative; }
+  .examples-btn {
+    background: var(--accent2);
+    border: 1.5px solid var(--border);
+    color: var(--text);
+    font-family: 'Quicksand', sans-serif;
+    font-weight: 600;
+    font-size: 0.82rem;
+    padding: 8px 16px;
+    border-radius: var(--radius-pill);
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+  .examples-btn:hover { background: var(--accent); border-color: var(--primary); }
+  .examples-dropdown {
+    display: none;
+    position: absolute;
+    bottom: calc(100% + 8px);
+    left: 0;
+    background: var(--surface);
+    border: 1.5px solid var(--border);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow-hover);
+    min-width: 340px;
+    max-width: 480px;
+    z-index: 50;
+    overflow: hidden;
+  }
+  .examples-dropdown.open { display: block; }
+  .examples-category { padding: 14px 16px 8px; }
+  .examples-category-title {
+    font-family: 'Quicksand', sans-serif;
+    font-weight: 700;
+    font-size: 0.78rem;
+    color: var(--primary);
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    margin-bottom: 8px;
+  }
+  .example-item {
+    padding: 8px 10px;
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+    font-size: 0.82rem;
+    color: var(--text);
+    transition: background 0.15s;
+    line-height: 1.4;
+  }
+  .example-item:hover { background: var(--accent2); }
+  .example-item.structured-ex {
+    background: var(--accent2);
+    border: 1px dashed var(--border);
+    margin-top: 4px;
+  }
+  .example-item.structured-ex small { color: var(--primary); font-weight: 600; display: block; font-size: 0.72rem; }
+  .examples-sep { height: 1px; background: var(--border); margin: 0; }
+
+  /* Save prompt */
+  .save-prompt-btn {
+    background: none;
+    border: 1.5px solid var(--border);
+    color: var(--text-muted);
+    font-family: 'Quicksand', sans-serif;
+    font-weight: 600;
+    font-size: 0.82rem;
+    padding: 8px 16px;
+    border-radius: var(--radius-pill);
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+  .save-prompt-btn:hover { border-color: var(--primary); color: var(--primary); }
+
+  /* Send button */
+  .send-btn {
+    margin-left: auto;
+    background: linear-gradient(135deg, #f472b6, #db2777);
+    border: none;
+    color: #fff;
+    font-family: 'Quicksand', sans-serif;
+    font-weight: 700;
+    font-size: 0.9rem;
+    padding: 10px 28px;
+    border-radius: var(--radius-pill);
+    cursor: pointer;
+    box-shadow: 0 4px 14px rgba(244,114,182,0.4);
+    transition: all 0.2s;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .send-btn:hover { transform: translateY(-2px); box-shadow: 0 6px 20px rgba(244,114,182,0.5); }
+  .send-btn:active { transform: translateY(0); }
+  .send-btn:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+
+  /* ── SCHEMA SECTION ── */
+  .schema-section { display: none; margin-top: 14px; }
+  .schema-section.visible { display: block; }
+  .schema-section label {
+    font-family: 'Quicksand', sans-serif;
+    font-weight: 600;
+    font-size: 0.82rem;
+    color: var(--text-muted);
+    display: block;
+    margin-bottom: 6px;
+  }
+  .schema-error { color: var(--error); font-size: 0.78rem; margin-top: 4px; }
+
+  /* ── RESPONSE ── */
+  .response-card { display: none; }
+  .response-card.visible { display: block; }
+  .response-content {
+    min-height: 80px;
+    line-height: 1.7;
+    color: var(--text);
+    font-size: 0.88rem;
+  }
+  .response-content h1, .response-content h2, .response-content h3 {
+    font-family: 'Quicksand', sans-serif;
+    color: var(--primary-dark);
+    margin: 12px 0 6px;
+  }
+  .response-content p { margin-bottom: 10px; }
+  .response-content ul, .response-content ol { padding-left: 20px; margin-bottom: 10px; }
+  .response-content li { margin-bottom: 4px; }
+  .response-content code {
+    background: var(--accent2);
+    padding: 2px 6px;
+    border-radius: 5px;
+    font-family: 'Courier New', monospace;
+    font-size: 0.82em;
+    color: var(--primary-dark);
+  }
+  .response-content pre {
+    background: #f8f3f5;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    padding: 14px;
+    overflow-x: auto;
+    margin-bottom: 10px;
+  }
+  .response-content pre code { background: none; padding: 0; color: inherit; font-size: 0.85em; }
+  .response-content blockquote {
+    border-left: 3px solid var(--primary);
+    padding-left: 14px;
+    color: var(--text-muted);
+    margin-bottom: 10px;
+  }
+
+  /* Loading spinner */
+  .spinner-wrap { display: flex; align-items: center; gap: 12px; padding: 20px 0; }
+  .spinner {
+    width: 28px; height: 28px;
+    border: 3px solid var(--accent);
+    border-top-color: var(--primary);
+    border-radius: 50%;
+    animation: spin 0.7s linear infinite;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .spinner-text { font-family: 'Quicksand', sans-serif; font-weight: 600; color: var(--text-muted); font-size: 0.88rem; }
+
+  /* Metrics bar */
+  .metrics-bar {
+    display: flex;
+    gap: 8px;
+    margin-top: 14px;
+    flex-wrap: wrap;
+  }
+  .metric-pill {
+    background: var(--accent);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-pill);
+    padding: 4px 12px;
+    font-size: 0.75rem;
+    font-family: 'Quicksand', sans-serif;
+    font-weight: 600;
+    color: var(--text-muted);
+  }
+
+  /* ── VALIDATOR ── */
+  .validator-section { display: none; margin-top: 16px; }
+  .validator-section.visible { display: block; }
+  .validator-title {
+    font-family: 'Quicksand', sans-serif;
+    font-size: 0.82rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--primary);
+    margin-bottom: 10px;
+  }
+  .validator-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 7px 0;
+    border-bottom: 1px solid var(--accent2);
+    font-size: 0.82rem;
+  }
+  .validator-row:last-child { border-bottom: none; }
+  .val-icon { font-size: 1rem; width: 20px; text-align: center; flex-shrink: 0; }
+  .val-field { font-family: 'Courier New', monospace; font-weight: bold; color: var(--text); flex: 1; font-size: 0.78rem; }
+  .val-note { color: var(--text-muted); font-size: 0.78rem; }
+
+  /* ── ANTHROPIC CORS PANEL ── */
+  .cors-panel {
+    background: linear-gradient(135deg, #fff0f3, #fce7f3);
+    border: 2px solid var(--border);
+    border-radius: var(--radius);
+    padding: 20px 24px;
+    display: none;
+  }
+  .cors-panel.visible { display: block; }
+  .cors-panel h3 {
+    font-family: 'Quicksand', sans-serif;
+    font-size: 1rem;
+    font-weight: 700;
+    color: var(--primary-dark);
+    margin-bottom: 10px;
+  }
+  .cors-panel p { font-size: 0.85rem; color: var(--text); line-height: 1.6; margin-bottom: 8px; }
+  .cors-panel .suggestion {
+    background: var(--accent);
+    border-radius: var(--radius-sm);
+    padding: 10px 14px;
+    font-size: 0.82rem;
+    color: var(--text-muted);
+    margin-top: 10px;
+  }
+
+  /* ── ERROR BANNER ── */
+  .error-banner {
+    background: linear-gradient(135deg, #fff1f2, #ffe4e6);
+    border: 1.5px solid var(--error);
+    border-radius: var(--radius-sm);
+    padding: 10px 14px;
+    font-size: 0.82rem;
+    color: #9f1239;
+    display: none;
+    margin-top: 10px;
+    font-family: 'Quicksand', sans-serif;
+    font-weight: 600;
+  }
+  .error-banner.visible { display: block; }
+
+  /* ── PROMPT LIBRARY ── */
+  .library-section { border-top: 1.5px solid var(--border); }
+  .library-toggle-btn {
+    background: none;
+    border: none;
+    font-family: 'Quicksand', sans-serif;
+    font-weight: 700;
+    font-size: 0.88rem;
+    color: var(--text-muted);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 16px 24px;
+    width: 100%;
+    text-align: left;
+    transition: color 0.2s;
+  }
+  .library-toggle-btn:hover { color: var(--primary); }
+  .library-toggle-btn .chevron { transition: transform 0.25s; font-style: normal; }
+  .library-toggle-btn.open .chevron { transform: rotate(180deg); }
+  .library-body { display: none; padding: 0 24px 20px; }
+  .library-body.open { display: block; }
+  .library-empty { font-size: 0.82rem; color: var(--text-muted); font-style: italic; }
+  .library-items { display: flex; flex-direction: column; gap: 8px; }
+  .library-item {
+    background: var(--accent2);
+    border: 1.5px solid var(--border);
+    border-radius: var(--radius-sm);
+    padding: 10px 14px;
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+  }
+  .library-item-info { flex: 1; min-width: 0; }
+  .library-item-name { font-family: 'Quicksand', sans-serif; font-weight: 700; font-size: 0.82rem; color: var(--text); }
+  .library-item-preview { font-size: 0.78rem; color: var(--text-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .library-item-actions { display: flex; gap: 6px; flex-shrink: 0; }
+  .lib-btn {
+    background: none;
+    border: 1.5px solid var(--border);
+    border-radius: var(--radius-pill);
+    font-family: 'Quicksand', sans-serif;
+    font-weight: 600;
+    font-size: 0.72rem;
+    padding: 4px 10px;
+    cursor: pointer;
+    transition: all 0.15s;
+    color: var(--text-muted);
+  }
+  .lib-btn:hover { border-color: var(--primary); color: var(--primary); }
+  .lib-btn.del:hover { border-color: var(--error); color: #be123c; }
+
+  /* Save prompt modal */
+  .modal-overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(74,25,66,0.25);
+    backdrop-filter: blur(4px);
+    z-index: 200;
+    align-items: center;
+    justify-content: center;
+  }
+  .modal-overlay.open { display: flex; }
+  .modal {
+    background: var(--surface);
+    border: 2px solid var(--border);
+    border-radius: var(--radius);
+    padding: 28px;
+    max-width: 380px;
+    width: 90%;
+    box-shadow: 0 20px 60px rgba(244,114,182,0.25);
+  }
+  .modal h3 { font-family: 'Quicksand', sans-serif; font-size: 1.1rem; font-weight: 700; color: var(--primary-dark); margin-bottom: 14px; }
+  .modal label { font-family: 'Quicksand', sans-serif; font-weight: 600; font-size: 0.82rem; color: var(--text-muted); display: block; margin-bottom: 6px; }
+  .modal input[type="text"] {
+    width: 100%;
+    padding: 10px 14px;
+    border: 1.5px solid var(--border);
+    border-radius: var(--radius-sm);
+    font-family: 'Inter', sans-serif;
+    font-size: 0.88rem;
+    color: var(--text);
+    background: var(--accent2);
+    outline: none;
+    transition: border-color 0.2s;
+  }
+  .modal input[type="text"]:focus { border-color: var(--primary); }
+  .modal-actions { display: flex; gap: 10px; margin-top: 18px; justify-content: flex-end; }
+  .modal-cancel {
+    background: none;
+    border: 1.5px solid var(--border);
+    color: var(--text-muted);
+    font-family: 'Quicksand', sans-serif;
+    font-weight: 600;
+    padding: 8px 20px;
+    border-radius: var(--radius-pill);
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+  .modal-cancel:hover { border-color: var(--text-muted); }
+  .modal-save {
+    background: linear-gradient(135deg, #f472b6, #db2777);
+    border: none;
+    color: #fff;
+    font-family: 'Quicksand', sans-serif;
+    font-weight: 700;
+    padding: 8px 20px;
+    border-radius: var(--radius-pill);
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+  .modal-save:hover { transform: translateY(-1px); box-shadow: 0 4px 12px rgba(244,114,182,0.4); }
+
+  /* ── COMPARE MODE ── */
+  .compare-layout { display: none; gap: 16px; }
+  .compare-layout.visible { display: flex; }
+  @media (max-width: 680px) { .compare-layout { flex-direction: column; } }
+  .compare-panel {
+    flex: 1;
+    background: var(--surface);
+    border: 1.5px solid var(--border);
+    border-radius: var(--radius);
+    padding: 18px 20px;
+    box-shadow: var(--shadow);
+  }
+  .compare-panel-header {
+    font-family: 'Quicksand', sans-serif;
+    font-weight: 700;
+    font-size: 0.88rem;
+    color: var(--primary);
+    margin-bottom: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+  .compare-panel select { width: 100%; margin-bottom: 10px; }
+
+  /* ── HLJS OVERRIDES ── */
+  .hljs { background: #f8f3f5 !important; border-radius: var(--radius-sm); padding: 14px !important; }
+
+  /* ── UTIL ── */
+  .hidden { display: none !important; }
+  .text-muted { color: var(--text-muted); }
+  .mt-2 { margin-top: 8px; }
+</style>
+</head>
+<body>
+
+<!-- HEADER -->
+<header>
+  <h1>🌸 LLM Switchboard</h1>
+  <button class="compare-toggle-btn" id="compareModeBtn">Compare Mode ⇄</button>
+</header>
+
+<!-- SAVE MODAL -->
+<div class="modal-overlay" id="saveModal">
+  <div class="modal">
+    <h3>Save this prompt 🌸</h3>
+    <label for="promptName">Name it something cute</label>
+    <input type="text" id="promptName" placeholder="e.g. Jazz haiku, Carbon facts…" maxlength="60" />
+    <div class="modal-actions">
+      <button class="modal-cancel" id="modalCancel">Cancel</button>
+      <button class="modal-save" id="modalSave">Save 🌸</button>
+    </div>
+  </div>
+</div>
+
+<!-- MAIN APP -->
+<div class="app-container" id="mainContainer">
+
+  <!-- API KEYS -->
+  <div class="card">
+    <div class="card-title">✨ API Keys</div>
+    <div class="keys-grid">
+      <div class="key-field">
+        <label for="openaiKey">OpenAI Key</label>
+        <div class="key-input-wrap">
+          <input type="password" id="openaiKey" placeholder="sk-…" autocomplete="off" />
+          <button class="eye-btn" onclick="toggleKeyVisibility('openaiKey', this)">👁</button>
+        </div>
+        <button class="upload-btn" onclick="document.getElementById('openaiFile').click()">📎 Upload .env / CSV</button>
+        <input type="file" id="openaiFile" accept=".env,.csv,.txt" style="display:none" onchange="parseKeyFile(event, 'openai')" />
+        <div class="privacy-note">Your key is never saved or transmitted beyond this session.</div>
+      </div>
+      <div class="key-field">
+        <label for="anthropicKey">Anthropic Key</label>
+        <div class="key-input-wrap">
+          <input type="password" id="anthropicKey" placeholder="sk-ant-…" autocomplete="off" />
+          <button class="eye-btn" onclick="toggleKeyVisibility('anthropicKey', this)">👁</button>
+        </div>
+        <button class="upload-btn" onclick="document.getElementById('anthropicFile').click()">📎 Upload .env / CSV</button>
+        <input type="file" id="anthropicFile" accept=".env,.csv,.txt" style="display:none" onchange="parseKeyFile(event, 'anthropic')" />
+        <div class="privacy-note">Your key is never saved or transmitted beyond this session.</div>
+      </div>
+    </div>
+    <div class="keys-actions">
+      <button class="clear-keys-btn" onclick="clearKeys()">Clear Keys</button>
+      <span class="key-status" id="keyStatus"></span>
+    </div>
+  </div>
+
+  <!-- PROVIDER / MODEL / MODE -->
+  <div class="card">
+    <div class="card-title">🎛 Configuration</div>
+    <div class="config-row">
+      <div class="config-group">
+        <label>Provider</label>
+        <div class="provider-pills">
+          <div class="provider-pill">
+            <input type="radio" name="provider" id="provOpenAI" value="openai" checked />
+            <label for="provOpenAI">OpenAI</label>
+          </div>
+          <div class="provider-pill">
+            <input type="radio" name="provider" id="provAnthropic" value="anthropic" />
+            <label for="provAnthropic">Anthropic</label>
+          </div>
+        </div>
+      </div>
+      <div class="config-group">
+        <label for="modelSelect">Model</label>
+        <select id="modelSelect"></select>
+      </div>
+      <div class="config-group">
+        <label>Output Mode</label>
+        <div class="mode-toggle-wrap">
+          <span class="mode-label active" id="modeUnstructLabel">Unstructured</span>
+          <label class="toggle-switch">
+            <input type="checkbox" id="modeToggle" />
+            <div class="toggle-track"><div class="toggle-thumb"></div></div>
+          </label>
+          <span class="mode-label" id="modeStructLabel">Structured</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- PROMPT -->
+  <div class="card">
+    <div class="card-title">💬 Prompt</div>
+    <textarea id="promptInput" placeholder="Type your prompt here… or pick an example below ✨" rows="4"></textarea>
+
+    <div class="schema-section" id="schemaSection">
+      <label for="schemaInput">JSON Schema (for structured output)</label>
+      <textarea class="schema-area" id="schemaInput" placeholder='{"type":"object","properties":{…},"required":[…]}' rows="5"></textarea>
+      <div class="schema-error hidden" id="schemaError"></div>
+    </div>
+
+    <div class="prompt-actions">
+      <div class="examples-wrap">
+        <button class="examples-btn" id="examplesBtn">Example Prompts 🎵 🏃 🔬</button>
+        <div class="examples-dropdown" id="examplesDropdown">
+          <!-- populated by JS -->
+        </div>
+      </div>
+      <button class="save-prompt-btn" id="savePromptBtn">Save 🌸</button>
+      <button class="send-btn" id="sendBtn">Send ✨</button>
+    </div>
+    <div class="error-banner" id="promptError"></div>
+  </div>
+
+  <!-- ANTHROPIC CORS PANEL -->
+  <div class="cors-panel" id="corsPanel">
+    <h3>Why Anthropic doesn't work in the browser 🌸</h3>
+    <p>Anthropic's API doesn't allow direct requests from web browsers — this is a web security feature called <strong>CORS</strong> (Cross-Origin Resource Sharing). OpenAI has opted into allowing browser requests; Anthropic has not.</p>
+    <p>The request you attempted was blocked before it could leave your browser.</p>
+    <div class="suggestion">
+      💡 <strong>To use Anthropic models:</strong> run a small backend proxy (e.g. a local Express or FastAPI server) that forwards requests to <code>api.anthropic.com</code>, or use OpenAI models for in-browser testing.
+    </div>
+  </div>
+
+  <!-- RESPONSE -->
+  <div class="card response-card" id="responseCard">
+    <div class="card-title">💅 Response</div>
+    <div id="responseContent" class="response-content"></div>
+    <div class="metrics-bar hidden" id="metricsBar"></div>
+    <div class="validator-section" id="validatorSection">
+      <div class="validator-title">🔬 Schema Validator</div>
+      <div id="validatorRows"></div>
+    </div>
+  </div>
+
+  <!-- COMPARE MODE -->
+  <div class="compare-layout" id="compareLayout">
+    <div class="compare-panel">
+      <div class="compare-panel-header">
+        <span>Panel A</span>
+        <select id="compareProviderA" onchange="updateComparePanelModels('A')"></select>
+      </div>
+      <select id="compareModelA"></select>
+      <div class="response-content" id="compareResponseA" style="min-height:80px; font-size:0.85rem;"></div>
+      <div class="metrics-bar" id="compareMetricsA"></div>
+    </div>
+    <div class="compare-panel">
+      <div class="compare-panel-header">
+        <span>Panel B</span>
+        <select id="compareProviderB" onchange="updateComparePanelModels('B')"></select>
+      </div>
+      <select id="compareModelB"></select>
+      <div class="response-content" id="compareResponseB" style="min-height:80px; font-size:0.85rem;"></div>
+      <div class="metrics-bar" id="compareMetricsB"></div>
+    </div>
+  </div>
+
+  <!-- PROMPT LIBRARY -->
+  <div class="card library-section" style="padding:0;">
+    <button class="library-toggle-btn" id="libraryToggle">
+      My Prompts 🌸 <em class="chevron">▾</em>
+    </button>
+    <div class="library-body" id="libraryBody">
+      <div class="library-empty" id="libraryEmpty">No saved prompts yet. Type something and hit Save 🌸</div>
+      <div class="library-items" id="libraryItems"></div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+// ── CONSTANTS ──────────────────────────────────────────────────────────────
+const MODELS = {
+  openai: ['gpt-4o', 'gpt-4o-mini', 'gpt-4-turbo', 'gpt-3.5-turbo'],
+  anthropic: ['claude-opus-4-5', 'claude-sonnet-4-5', 'claude-haiku-4-5']
+};
+
+const EXAMPLES = [
+  {
+    category: '🎵 Music / Arts',
+    items: [
+      { prompt: 'Describe the emotional arc of a minor-key jazz ballad in three sentences.', mode: 'unstructured' },
+      { prompt: "What makes impressionist painting different from realism? Keep it punchy.", mode: 'unstructured' },
+      { prompt: 'Write a haiku about a guitar left out in the rain.', mode: 'unstructured' },
+      {
+        prompt: "Give me details about the song 'Bohemian Rhapsody' by Queen.",
+        schema: JSON.stringify({ type: 'object', properties: { title: { type: 'string' }, artist: { type: 'string' }, year: { type: 'integer' }, genre: { type: 'string' }, fun_fact: { type: 'string' } }, required: ['title', 'artist', 'year', 'genre', 'fun_fact'] }, null, 2),
+        mode: 'structured',
+        label: '🎵 Structured: Bohemian Rhapsody'
+      }
+    ]
+  },
+  {
+    category: '🏃 Sports / Fitness',
+    items: [
+      { prompt: "What's the best way to build a weekly workout routine for a beginner runner?", mode: 'unstructured' },
+      { prompt: 'Explain why sleep is critical for athletic recovery — in one paragraph.', mode: 'unstructured' },
+      { prompt: 'Compare sprinting and long-distance running as exercise modalities.', mode: 'unstructured' },
+      {
+        prompt: 'Give me a 3-day beginner strength training plan.',
+        schema: JSON.stringify({ type: 'object', properties: { day1: { type: 'string' }, day2: { type: 'string' }, day3: { type: 'string' }, tip: { type: 'string' } }, required: ['day1', 'day2', 'day3', 'tip'] }, null, 2),
+        mode: 'structured',
+        label: '🏃 Structured: Workout Plan'
+      }
+    ]
+  },
+  {
+    category: '🔬 Science / Tech',
+    items: [
+      { prompt: "Explain quantum entanglement like I'm a curious high schooler.", mode: 'unstructured' },
+      { prompt: "What's the difference between machine learning and deep learning?", mode: 'unstructured' },
+      { prompt: 'Why is CRISPR considered revolutionary in biology?', mode: 'unstructured' },
+      {
+        prompt: 'Tell me about the element Carbon.',
+        schema: JSON.stringify({ type: 'object', properties: { name: { type: 'string' }, symbol: { type: 'string' }, atomic_number: { type: 'integer' }, fun_fact: { type: 'string' } }, required: ['name', 'symbol', 'atomic_number', 'fun_fact'] }, null, 2),
+        mode: 'structured',
+        label: '🔬 Structured: Carbon'
+      }
+    ]
+  }
+];
+
+// ── STATE ──────────────────────────────────────────────────────────────────
+let keys = { openai: '', anthropic: '' };
+let promptLibrary = [];
+let compareMode = false;
+
+// ── INIT ───────────────────────────────────────────────────────────────────
+function init() {
+  updateModelSelect();
+  buildExamplesDropdown();
+  setupCompareProviders();
+  updateKeyStatus();
+
+  // Events
+  document.querySelectorAll('input[name="provider"]').forEach(r => r.addEventListener('change', updateModelSelect));
+  document.getElementById('modeToggle').addEventListener('change', onModeToggle);
+  document.getElementById('sendBtn').addEventListener('click', handleSend);
+  document.getElementById('compareModeBtn').addEventListener('click', toggleCompareMode);
+  document.getElementById('examplesBtn').addEventListener('click', toggleExamples);
+  document.getElementById('savePromptBtn').addEventListener('click', openSaveModal);
+  document.getElementById('modalCancel').addEventListener('click', closeSaveModal);
+  document.getElementById('modalSave').addEventListener('click', confirmSavePrompt);
+  document.getElementById('libraryToggle').addEventListener('click', toggleLibrary);
+  document.getElementById('openaiKey').addEventListener('input', updateKeyStatus);
+  document.getElementById('anthropicKey').addEventListener('input', updateKeyStatus);
+
+  // Close examples on outside click
+  document.addEventListener('click', e => {
+    const wrap = document.getElementById('examplesBtn').closest('.examples-wrap');
+    if (!wrap.contains(e.target)) closeExamples();
+  });
+
+  // Provider change → show/hide CORS panel hint
+  document.querySelectorAll('input[name="provider"]').forEach(r => r.addEventListener('change', () => {
+    document.getElementById('corsPanel').classList.remove('visible');
+  }));
+}
+
+// ── KEY HANDLING ───────────────────────────────────────────────────────────
+function toggleKeyVisibility(id, btn) {
+  const el = document.getElementById(id);
+  el.type = el.type === 'password' ? 'text' : 'password';
+  btn.textContent = el.type === 'password' ? '👁' : '🙈';
+}
+
+function parseKeyFile(event, provider) {
+  const file = event.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = e => {
+    const text = e.target.result;
+    // Try .env style: OPENAI_API_KEY=sk-...
+    const envMatch = text.match(/(?:OPENAI_API_KEY|ANTHROPIC_API_KEY|API_KEY)\s*=\s*([^\s\n]+)/i);
+    if (envMatch) {
+      setKey(provider, envMatch[1].trim());
+      return;
+    }
+    // Try CSV: first line value
+    const lines = text.split(/\r?\n/).filter(Boolean);
+    for (const line of lines) {
+      const val = line.split(',').map(s => s.trim()).find(s => s.startsWith('sk-'));
+      if (val) { setKey(provider, val); return; }
+    }
+    // Fallback: first non-empty line
+    if (lines[0]) setKey(provider, lines[0].trim());
+  };
+  reader.readAsText(file);
+  event.target.value = '';
+}
+
+function setKey(provider, val) {
+  keys[provider] = val;
+  const el = document.getElementById(provider === 'openai' ? 'openaiKey' : 'anthropicKey');
+  el.value = val;
+  updateKeyStatus();
+}
+
+function clearKeys() {
+  keys = { openai: '', anthropic: '' };
+  document.getElementById('openaiKey').value = '';
+  document.getElementById('anthropicKey').value = '';
+  updateKeyStatus();
+}
+
+function updateKeyStatus() {
+  keys.openai = document.getElementById('openaiKey').value.trim();
+  keys.anthropic = document.getElementById('anthropicKey').value.trim();
+  const el = document.getElementById('keyStatus');
+  const parts = [];
+  if (keys.openai) parts.push('<span class="dot active"></span>OpenAI');
+  else parts.push('<span class="dot inactive"></span>OpenAI');
+  if (keys.anthropic) parts.push('<span class="dot active"></span>Anthropic');
+  else parts.push('<span class="dot inactive"></span>Anthropic');
+  el.innerHTML = parts.join('  ');
+}
+
+// ── MODEL SELECT ───────────────────────────────────────────────────────────
+function updateModelSelect() {
+  const provider = document.querySelector('input[name="provider"]:checked').value;
+  const sel = document.getElementById('modelSelect');
+  sel.innerHTML = MODELS[provider].map(m => `<option value="${m}">${m}</option>`).join('');
+}
+
+// ── MODE TOGGLE ────────────────────────────────────────────────────────────
+function onModeToggle() {
+  const structured = document.getElementById('modeToggle').checked;
+  document.getElementById('schemaSection').classList.toggle('visible', structured);
+  document.getElementById('modeUnstructLabel').classList.toggle('active', !structured);
+  document.getElementById('modeStructLabel').classList.toggle('active', structured);
+}
+
+function isStructuredMode() { return document.getElementById('modeToggle').checked; }
+
+// ── EXAMPLES ──────────────────────────────────────────────────────────────
+function buildExamplesDropdown() {
+  const dd = document.getElementById('examplesDropdown');
+  let html = '';
+  EXAMPLES.forEach((cat, ci) => {
+    if (ci > 0) html += '<div class="examples-sep"></div>';
+    html += `<div class="examples-category"><div class="examples-category-title">${cat.category}</div>`;
+    cat.items.forEach((item, ii) => {
+      const isStruct = item.mode === 'structured';
+      const enc = encodeURIComponent(JSON.stringify(item));
+      html += `<div class="example-item${isStruct ? ' structured-ex' : ''}" onclick="loadExample('${enc}')">`;
+      if (isStruct) html += `<small>Structured ✨</small>`;
+      html += `${item.prompt}</div>`;
+    });
+    html += '</div>';
+  });
+  dd.innerHTML = html;
+}
+
+function loadExample(enc) {
+  const item = JSON.parse(decodeURIComponent(enc));
+  document.getElementById('promptInput').value = item.prompt;
+  if (item.mode === 'structured') {
+    document.getElementById('modeToggle').checked = true;
+    onModeToggle();
+    if (item.schema) document.getElementById('schemaInput').value = item.schema;
+  } else {
+    document.getElementById('modeToggle').checked = false;
+    onModeToggle();
+  }
+  closeExamples();
+}
+
+function toggleExamples() {
+  document.getElementById('examplesDropdown').classList.toggle('open');
+}
+function closeExamples() {
+  document.getElementById('examplesDropdown').classList.remove('open');
+}
+
+// ── SEND ───────────────────────────────────────────────────────────────────
+async function handleSend() {
+  const prompt = document.getElementById('promptInput').value.trim();
+  const provider = document.querySelector('input[name="provider"]:checked').value;
+  const model = document.getElementById('modelSelect').value;
+  const structured = isStructuredMode();
+  const schemaRaw = document.getElementById('schemaInput').value.trim();
+
+  // Validation
+  const errEl = document.getElementById('promptError');
+  errEl.classList.remove('visible');
+  document.getElementById('corsPanel').classList.remove('visible');
+
+  if (!prompt) { showError('Please type a prompt first ✨'); return; }
+
+  keys.openai = document.getElementById('openaiKey').value.trim();
+  keys.anthropic = document.getElementById('anthropicKey').value.trim();
+
+  const key = keys[provider];
+  if (!key) { showError(`No ${provider === 'openai' ? 'OpenAI' : 'Anthropic'} key set — please paste your key above 🌸`); return; }
+
+  let schema = null;
+  if (structured) {
+    const schemaErr = document.getElementById('schemaError');
+    schemaErr.classList.add('hidden');
+    if (schemaRaw) {
+      try { schema = JSON.parse(schemaRaw); }
+      catch { schemaErr.textContent = 'Invalid JSON schema — please fix it before sending.'; schemaErr.classList.remove('hidden'); return; }
+    }
+  }
+
+  // Show spinner
+  const card = document.getElementById('responseCard');
+  const content = document.getElementById('responseContent');
+  card.classList.add('visible');
+  content.innerHTML = `<div class="spinner-wrap"><div class="spinner"></div><span class="spinner-text">Thinking…</span></div>`;
+  document.getElementById('metricsBar').classList.add('hidden');
+  document.getElementById('validatorSection').classList.remove('visible');
+  document.getElementById('sendBtn').disabled = true;
+
+  const t0 = Date.now();
+  try {
+    const result = await callAPI(provider, model, key, prompt, structured, schema);
+    const elapsed = ((Date.now() - t0) / 1000).toFixed(2);
+    renderResponse(result, structured, schema, elapsed);
+  } catch (err) {
+    if (err.isCors) {
+      content.innerHTML = '';
+      document.getElementById('corsPanel').classList.add('visible');
+    } else {
+      content.innerHTML = `<div class="error-banner visible">${escHtml(err.message)}</div>`;
+    }
+  } finally {
+    document.getElementById('sendBtn').disabled = false;
+  }
+
+  // Compare mode
+  if (compareMode) {
+    sendCompare(prompt, structured, schema);
+  }
+}
+
+async function callAPI(provider, model, key, prompt, structured, schema) {
+  if (provider === 'openai') {
+    return callOpenAI(model, key, prompt, structured, schema);
+  } else {
+    return callAnthropic(model, key, prompt, structured, schema);
+  }
+}
+
+async function callOpenAI(model, key, prompt, structured, schema) {
+  const body = {
+    model,
+    messages: [{ role: 'user', content: prompt }]
+  };
+  if (structured && schema) {
+    body.response_format = { type: 'json_schema', json_schema: { name: 'response', schema, strict: true } };
+  } else if (structured) {
+    body.response_format = { type: 'json_object' };
+    body.messages[0].content = prompt + '\n\nRespond with valid JSON only.';
+  }
+
+  let res;
+  try {
+    res = await fetch('https://api.openai.com/v1/chat/completions', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${key}` },
+      body: JSON.stringify(body)
+    });
+  } catch (e) {
+    if (e.message.includes('Failed to fetch') || e.message.includes('NetworkError')) {
+      const ce = new Error('Network error — check your connection.'); ce.isCors = false; throw ce;
+    }
+    throw e;
+  }
+
+  const data = await res.json();
+  if (!res.ok) {
+    if (res.status === 401) throw new Error('Invalid API key — double-check your OpenAI key.');
+    if (res.status === 429) throw new Error('Slow down, bestie 🌸 — rate limit reached.');
+    throw new Error(data.error?.message || `API error ${res.status}`);
+  }
+  return {
+    text: data.choices[0].message.content,
+    usage: data.usage,
+    model: data.model
+  };
+}
+
+async function callAnthropic(model, key, prompt, structured, schema) {
+  // Anthropic is CORS-restricted from the browser
+  const ce = new Error('Anthropic CORS restriction'); ce.isCors = true;
+  throw ce;
+}
+
+function renderResponse(result, structured, schema, elapsed) {
+  const content = document.getElementById('responseContent');
+  const metricsBar = document.getElementById('metricsBar');
+
+  if (structured) {
+    let parsed = null;
+    try { parsed = JSON.parse(result.text); } catch {}
+    if (parsed) {
+      const highlighted = hljs.highlight(JSON.stringify(parsed, null, 2), { language: 'json' }).value;
+      content.innerHTML = `<pre><code class="hljs language-json">${highlighted}</code></pre>`;
+      if (schema) renderValidator(parsed, schema);
+    } else {
+      content.innerHTML = `<div class="error-banner visible" style="display:block;">The model returned non-JSON. Raw response:</div><pre style="margin-top:8px;padding:14px;background:#f8f3f5;border-radius:10px;overflow:auto;font-size:0.8rem;">${escHtml(result.text)}</pre>`;
+    }
+  } else {
+    content.innerHTML = marked.parse(result.text);
+    content.querySelectorAll('pre code').forEach(el => hljs.highlightElement(el));
+  }
+
+  // Metrics
+  const words = result.text.split(/\s+/).filter(Boolean).length;
+  let html = `<span class="metric-pill">⏱ ${elapsed}s</span><span class="metric-pill">🔤 ~${words} words</span>`;
+  if (result.usage?.total_tokens) html += `<span class="metric-pill">🪙 ${result.usage.total_tokens} tokens</span>`;
+  metricsBar.innerHTML = html;
+  metricsBar.classList.remove('hidden');
+}
+
+function renderValidator(parsed, schema) {
+  const section = document.getElementById('validatorSection');
+  const rows = document.getElementById('validatorRows');
+  section.classList.add('visible');
+
+  const props = schema.properties || {};
+  const required = schema.required || [];
+  let html = '';
+
+  for (const [field, def] of Object.entries(props)) {
+    const isRequired = required.includes(field);
+    const present = field in parsed;
+    const actualType = parsed[field] === null ? 'null' : typeof parsed[field];
+    const expectedType = def.type;
+
+    let icon, note;
+    if (!present && isRequired) {
+      icon = '❌'; note = 'Required field missing';
+    } else if (!present) {
+      icon = '➖'; note = 'Optional, not present';
+    } else if (expectedType && actualType !== expectedType && !(expectedType === 'integer' && Number.isInteger(parsed[field]))) {
+      icon = '⚠️'; note = `Expected ${expectedType}, got ${actualType}`;
+    } else {
+      icon = '✅'; note = `${actualType}`;
+    }
+
+    html += `<div class="validator-row">
+      <span class="val-icon">${icon}</span>
+      <span class="val-field">${escHtml(field)}</span>
+      <span class="val-note">${note}</span>
+    </div>`;
+  }
+  rows.innerHTML = html;
+}
+
+function showError(msg) {
+  const el = document.getElementById('promptError');
+  el.textContent = msg;
+  el.classList.add('visible');
+}
+
+// ── COMPARE MODE ───────────────────────────────────────────────────────────
+function setupCompareProviders() {
+  ['A', 'B'].forEach(panel => {
+    const sel = document.getElementById(`compareProvider${panel}`);
+    sel.innerHTML = Object.keys(MODELS).map(p => `<option value="${p}">${p === 'openai' ? 'OpenAI' : 'Anthropic'}</option>`).join('');
+    if (panel === 'B') sel.value = 'openai';
+    updateComparePanelModels(panel);
+  });
+  document.getElementById('compareProviderB').value = 'openai';
+  updateComparePanelModels('B');
+}
+
+function updateComparePanelModels(panel) {
+  const provider = document.getElementById(`compareProvider${panel}`).value;
+  const sel = document.getElementById(`compareModel${panel}`);
+  sel.innerHTML = MODELS[provider].map(m => `<option value="${m}">${m}</option>`).join('');
+  // Default B to a different model
+  if (panel === 'B') { sel.value = MODELS[provider][1] || MODELS[provider][0]; }
+}
+
+function toggleCompareMode() {
+  compareMode = !compareMode;
+  const btn = document.getElementById('compareModeBtn');
+  btn.classList.toggle('active', compareMode);
+  btn.textContent = compareMode ? 'Compare Mode ✓' : 'Compare Mode ⇄';
+  document.getElementById('compareLayout').classList.toggle('visible', compareMode);
+}
+
+async function sendCompare(prompt, structured, schema) {
+  const panels = ['A', 'B'];
+  panels.forEach(p => {
+    document.getElementById(`compareResponse${p}`).innerHTML = `<div class="spinner-wrap"><div class="spinner"></div><span class="spinner-text">Thinking…</span></div>`;
+    document.getElementById(`compareMetrics${p}`).innerHTML = '';
+  });
+
+  const tasks = panels.map(async p => {
+    const provider = document.getElementById(`compareProvider${p}`).value;
+    const model = document.getElementById(`compareModel${p}`).value;
+    keys.openai = document.getElementById('openaiKey').value.trim();
+    keys.anthropic = document.getElementById('anthropicKey').value.trim();
+    const key = keys[provider];
+    const t0 = Date.now();
+    const el = document.getElementById(`compareResponse${p}`);
+    const metricsEl = document.getElementById(`compareMetrics${p}`);
+    try {
+      const result = await callAPI(provider, model, key, prompt, structured, schema);
+      const elapsed = ((Date.now() - t0) / 1000).toFixed(2);
+      if (structured) {
+        let parsed = null;
+        try { parsed = JSON.parse(result.text); } catch {}
+        if (parsed) {
+          const highlighted = hljs.highlight(JSON.stringify(parsed, null, 2), { language: 'json' }).value;
+          el.innerHTML = `<pre><code class="hljs language-json">${highlighted}</code></pre>`;
+        } else { el.innerHTML = `<pre style="font-size:0.78rem">${escHtml(result.text)}</pre>`; }
+      } else {
+        el.innerHTML = marked.parse(result.text);
+      }
+      const words = result.text.split(/\s+/).filter(Boolean).length;
+      let mhtml = `<span class="metric-pill">⏱ ${elapsed}s</span><span class="metric-pill">🔤 ~${words} words</span>`;
+      if (result.usage?.total_tokens) mhtml += `<span class="metric-pill">🪙 ${result.usage.total_tokens} tokens</span>`;
+      metricsEl.innerHTML = mhtml;
+    } catch (err) {
+      if (err.isCors) {
+        el.innerHTML = `<div style="font-size:0.8rem;color:#be123c;padding:10px;">Anthropic is CORS-restricted in the browser. See the explanation above 🌸</div>`;
+      } else {
+        el.innerHTML = `<div style="font-size:0.8rem;color:#be123c;padding:10px;">${escHtml(err.message)}</div>`;
+      }
+    }
+  });
+  await Promise.all(tasks);
+}
+
+// ── PROMPT LIBRARY ─────────────────────────────────────────────────────────
+function openSaveModal() {
+  const prompt = document.getElementById('promptInput').value.trim();
+  if (!prompt) { showError('Type a prompt first before saving 🌸'); return; }
+  const defaultName = prompt.substring(0, 40) + (prompt.length > 40 ? '…' : '');
+  document.getElementById('promptName').value = defaultName;
+  document.getElementById('saveModal').classList.add('open');
+  setTimeout(() => document.getElementById('promptName').select(), 50);
+}
+
+function closeSaveModal() { document.getElementById('saveModal').classList.remove('open'); }
+
+function confirmSavePrompt() {
+  const name = document.getElementById('promptName').value.trim() || 'Saved Prompt';
+  const prompt = document.getElementById('promptInput').value.trim();
+  const structured = isStructuredMode();
+  const schema = document.getElementById('schemaInput').value.trim();
+  promptLibrary.push({ name, prompt, schema: structured ? schema : '', mode: structured ? 'structured' : 'unstructured' });
+  closeSaveModal();
+  renderLibrary();
+  // Open library if closed
+  document.getElementById('libraryBody').classList.add('open');
+  document.getElementById('libraryToggle').classList.add('open');
+}
+
+function renderLibrary() {
+  const empty = document.getElementById('libraryEmpty');
+  const items = document.getElementById('libraryItems');
+  empty.style.display = promptLibrary.length ? 'none' : '';
+  items.innerHTML = promptLibrary.map((item, i) => `
+    <div class="library-item">
+      <div class="library-item-info">
+        <div class="library-item-name">${escHtml(item.name)}</div>
+        <div class="library-item-preview">${escHtml(item.prompt)}</div>
+      </div>
+      <div class="library-item-actions">
+        <button class="lib-btn" onclick="loadFromLibrary(${i})">Load</button>
+        <button class="lib-btn del" onclick="deleteFromLibrary(${i})">Delete</button>
+      </div>
+    </div>
+  `).join('');
+}
+
+function loadFromLibrary(i) {
+  const item = promptLibrary[i];
+  document.getElementById('promptInput').value = item.prompt;
+  const structured = item.mode === 'structured';
+  document.getElementById('modeToggle').checked = structured;
+  onModeToggle();
+  if (structured && item.schema) document.getElementById('schemaInput').value = item.schema;
+}
+
+function deleteFromLibrary(i) {
+  promptLibrary.splice(i, 1);
+  renderLibrary();
+}
+
+function toggleLibrary() {
+  const body = document.getElementById('libraryBody');
+  const btn = document.getElementById('libraryToggle');
+  body.classList.toggle('open');
+  btn.classList.toggle('open');
+}
+
+// ── UTILS ──────────────────────────────────────────────────────────────────
+function escHtml(str) {
+  return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+// ── GO ─────────────────────────────────────────────────────────────────────
+init();
+</script>
+</body>
+</html>
