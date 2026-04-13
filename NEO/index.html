@@ -1304,37 +1304,21 @@ function renderGlobe() {
 
   const all = [...moon, ...pts];
 
-  // htmlElementsData renders each marker as a floating HTML dot at its altitude —
-  // no pillar/cylinder from the surface.
+  // labelsData at altitude 0 — dots sit directly on the globe surface.
+  const globeEl = document.getElementById('globe-el');
   globe
-    .htmlElementsData(all)
-    .htmlLat('lat')
-    .htmlLng('lng')
-    .htmlAltitude('alt')
-    .htmlElement(d => {
-      const el  = document.createElement('div');
-      const sz  = d._moon ? 14 : (d.pha ? 12 : 9);
-      const col = d.color;
-      el.style.cssText = [
-        `width:${sz}px`,
-        `height:${sz}px`,
-        'border-radius:50%',
-        `background:${col}`,
-        `box-shadow:0 0 ${sz * 1.5}px ${col}`,
-        `cursor:${d._moon ? 'default' : 'pointer'}`,
-        'pointer-events:auto',
-        'transition:transform 0.15s',
-      ].join(';');
-
-      if (d._moon) {
-        el.title = '🌕 Moon (1 LD)';
-      } else {
-        el.addEventListener('mouseenter', () => { el.style.transform = 'scale(1.6)'; });
-        el.addEventListener('mouseleave', () => { el.style.transform = 'scale(1)'; });
-        el.addEventListener('click', e => { e.stopPropagation(); showGlobeTooltip(d); });
-      }
-      return el;
-    });
+    .labelsData(all)
+    .labelLat('lat')
+    .labelLng('lng')
+    .labelAltitude(0)
+    .labelText(d => d._moon ? '🌕 Moon' : '')
+    .labelSize(d => d._moon ? 1.2 : 0)
+    .labelDotRadius(d => d._moon ? 0.6 : (d.pha ? 0.55 : 0.38))
+    .labelDotOrientation(() => 'bottom')
+    .labelColor(d => d.color)
+    .labelResolution(8)
+    .onLabelClick(d => { if (!d._moon) showGlobeTooltip(d); })
+    .onLabelHover(d => { globeEl.style.cursor = d && !d._moon ? 'pointer' : 'default'; });
 
   // If no NeoWs data yet, show a hint
   if (!neowsAsteroids.length) {
