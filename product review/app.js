@@ -11,8 +11,23 @@ const productName  = document.getElementById('product-name');
 const categoryEl   = document.getElementById('category');
 const featuresEl   = document.getElementById('features');
 const audienceEl   = document.getElementById('audience');
-const toneEl       = document.getElementById('tone');
-const lengthEl     = document.getElementById('length');
+const toneEl        = document.getElementById('tone');
+const lengthEl      = document.getElementById('length');
+const toneValues    = ['Enthusiastic', 'Balanced', 'Critical', 'Professional'];
+const lengthValues  = ['Short', 'Medium', 'Long'];
+
+function getTone()   { return toneValues[toneEl.value]; }
+function getLength() { return lengthValues[lengthEl.value]; }
+
+// Highlight active marker
+function updateMarkers(slider, values) {
+  const markers = slider.closest('.slider-wrap').querySelectorAll('.slider-markers span');
+  markers.forEach((el, i) => el.classList.toggle('active', i === +slider.value));
+}
+toneEl.addEventListener('input',   () => updateMarkers(toneEl, toneValues));
+lengthEl.addEventListener('input', () => updateMarkers(lengthEl, lengthValues));
+updateMarkers(toneEl, toneValues);
+updateMarkers(lengthEl, lengthValues);
 const generateBtn  = document.getElementById('generate-btn');
 const resetBtn     = document.getElementById('reset-btn');
 const copyBtn      = document.getElementById('copy-btn');
@@ -97,7 +112,7 @@ function buildPrompts() {
     : '';
 
   const user =
-    `Write a ${toneEl.value} product review of ${lengthEl.value} length for the following product:\n\n` +
+    `Write a ${getTone()} product review of ${getLength()} length for the following product:\n\n` +
     `- **Product Name:** ${productName.value.trim()}\n` +
     `- **Category:** ${categoryEl.value}\n` +
     `- **Key Features:** ${featuresEl.value.trim()}\n` +
@@ -196,8 +211,10 @@ resetBtn.addEventListener('click', () => {
   categoryEl.value  = '';
   featuresEl.value  = '';
   audienceEl.value  = '';
-  toneEl.value      = 'Balanced';
-  lengthEl.value    = 'Medium';
+  toneEl.value   = 1;
+  lengthEl.value = 1;
+  updateMarkers(toneEl, toneValues);
+  updateMarkers(lengthEl, lengthValues);
   [productName, categoryEl, featuresEl].forEach(el => el.classList.remove('invalid'));
   outputPanel.innerHTML = `
     <div class="placeholder">

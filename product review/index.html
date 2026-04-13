@@ -89,21 +89,27 @@
         <div class="form-row">
           <div class="form-group">
             <label for="tone">Tone</label>
-            <select id="tone">
-              <option value="Enthusiastic">Enthusiastic</option>
-              <option value="Balanced" selected>Balanced</option>
-              <option value="Critical">Critical</option>
-              <option value="Professional">Professional</option>
-            </select>
+            <div class="slider-wrap">
+              <input type="range" id="tone" min="0" max="3" step="1" value="1" class="slider" />
+              <div class="slider-markers">
+                <span>Enthusiastic</span>
+                <span>Balanced</span>
+                <span>Critical</span>
+                <span>Professional</span>
+              </div>
+            </div>
           </div>
 
           <div class="form-group">
             <label for="length">Review Length</label>
-            <select id="length">
-              <option value="Short">Short</option>
-              <option value="Medium" selected>Medium</option>
-              <option value="Long">Long</option>
-            </select>
+            <div class="slider-wrap">
+              <input type="range" id="length" min="0" max="2" step="1" value="1" class="slider" />
+              <div class="slider-markers">
+                <span>Short</span>
+                <span>Medium</span>
+                <span>Long</span>
+              </div>
+            </div>
           </div>
         </div>
 
