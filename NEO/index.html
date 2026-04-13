@@ -1304,21 +1304,19 @@ function renderGlobe() {
 
   const all = [...moon, ...pts];
 
-  // labelsData at altitude 0 — dots sit directly on the globe surface.
+  // pointsData with pointAltitude(0) renders flat discs flush on the globe surface —
+  // zero height means no pillar, just a coloured circle touching the surface.
   const globeEl = document.getElementById('globe-el');
   globe
-    .labelsData(all)
-    .labelLat('lat')
-    .labelLng('lng')
-    .labelAltitude(0)
-    .labelText(d => d._moon ? '🌕 Moon' : '')
-    .labelSize(d => d._moon ? 1.2 : 0)
-    .labelDotRadius(d => d._moon ? 0.6 : (d.pha ? 0.55 : 0.38))
-    .labelDotOrientation(() => 'bottom')
-    .labelColor(d => d.color)
-    .labelResolution(8)
-    .onLabelClick(d => { if (!d._moon) showGlobeTooltip(d); })
-    .onLabelHover(d => { globeEl.style.cursor = d && !d._moon ? 'pointer' : 'default'; });
+    .pointsData(all)
+    .pointLat('lat')
+    .pointLng('lng')
+    .pointAltitude(0)
+    .pointRadius(d => d._moon ? 0.6 : (d.pha ? 0.5 : 0.35))
+    .pointColor('color')
+    .pointLabel(d => d._moon ? '🌕 Moon (1 LD)' : `${d.name} — ${d.distLD?.toFixed(2)} LD`)
+    .onPointClick(d => { if (!d._moon) showGlobeTooltip(d); })
+    .onPointHover(d => { globeEl.style.cursor = d && !d._moon ? 'pointer' : 'default'; });
 
   // If no NeoWs data yet, show a hint
   if (!neowsAsteroids.length) {
