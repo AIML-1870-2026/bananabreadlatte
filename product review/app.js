@@ -13,7 +13,7 @@ const featuresEl   = document.getElementById('features');
 const audienceEl   = document.getElementById('audience');
 const toneEl        = document.getElementById('tone');
 const lengthEl      = document.getElementById('length');
-const toneValues    = ['Enthusiastic', 'Balanced', 'Critical', 'Professional'];
+const toneValues    = ['Serious', 'Balanced', 'Funny'];
 const lengthValues  = ['Short', 'Medium', 'Long'];
 
 function getTone()   { return toneValues[toneEl.value]; }
