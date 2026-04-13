@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Product Review Generator</title>
+<link rel="stylesheet" href="style.css" />
+  <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+</head>
+<body>
+  <div class="app-container">
+    <header>
+      <h1>Product Review Generator</h1>
+      <p class="subtitle">AI-generated product reviews using OpenAI</p>
+    </header>
+
+    <div class="legal-banner">
+      <strong>Educational Use Only.</strong> The FTC prohibits using AI-generated reviews as authentic consumer reviews.
+      Do not publish or use generated output as real product reviews. Violations carry civil penalties up to $51,744 per violation.
+    </div>
+
+    <div class="key-bar card">
+      <div class="key-bar-inner">
+        <label for="key-input">OpenAI API Key</label>
+        <div class="key-input-wrap">
+          <input type="password" id="key-input" placeholder="sk-proj-…" autocomplete="off" spellcheck="false" />
+          <button class="eye-btn" id="eye-btn" title="Show/hide key">
+            <svg id="eye-icon" xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>
+          </button>
+        </div>
+        <span class="key-or">or</span>
+        <button class="btn-upload" id="upload-btn">Upload .env</button>
+        <input type="file" id="env-file" accept=".env,.txt" style="display:none" />
+        <span id="key-status" class="key-status"></span>
+      </div>
+      <p class="privacy-note">Your key is never saved or transmitted beyond this session.</p>
+    </div>
+
+    <div id="api-error" class="api-error hidden"></div>
+
+    <main class="layout">
+      <section class="input-section card">
+        <h2>Product Details</h2>
+
+        <div class="form-group">
+          <label for="model">Model</label>
+          <select id="model">
+            <option value="gpt-4o">GPT-4o</option>
+            <option value="gpt-4o-mini" selected>GPT-4o Mini</option>
+            <option value="gpt-4-turbo">GPT-4 Turbo</option>
+            <option value="gpt-3.5-turbo">GPT-3.5 Turbo</option>
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label for="product-name">Product Name <span class="required">*</span></label>
+          <input type="text" id="product-name" placeholder="e.g. Sony WH-1000XM5" />
+        </div>
+
+        <div class="form-group">
+          <label for="category">Category <span class="required">*</span></label>
+          <select id="category">
+            <option value="">Select a category...</option>
+            <option value="Electronics">Electronics</option>
+            <option value="Clothing & Apparel">Clothing & Apparel</option>
+            <option value="Kitchen & Dining">Kitchen & Dining</option>
+            <option value="Home & Garden">Home & Garden</option>
+            <option value="Sports & Outdoors">Sports & Outdoors</option>
+            <option value="Beauty & Personal Care">Beauty & Personal Care</option>
+            <option value="Toys & Games">Toys & Games</option>
+            <option value="Books & Media">Books & Media</option>
+            <option value="Health & Wellness">Health & Wellness</option>
+            <option value="Automotive">Automotive</option>
+            <option value="Software & Apps">Software & Apps</option>
+            <option value="Other">Other</option>
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label for="features">Key Features <span class="required">*</span></label>
+          <textarea id="features" rows="4" placeholder="List notable features, specs, or selling points..."></textarea>
+        </div>
+
+        <div class="form-group">
+          <label for="audience">Target Audience <span class="optional">(optional)</span></label>
+          <input type="text" id="audience" placeholder="e.g. home cooks, college students, commuters" />
+        </div>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label for="tone">Tone</label>
+            <select id="tone">
+              <option value="Enthusiastic">Enthusiastic</option>
+              <option value="Balanced" selected>Balanced</option>
+              <option value="Critical">Critical</option>
+              <option value="Professional">Professional</option>
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label for="length">Review Length</label>
+            <select id="length">
+              <option value="Short">Short</option>
+              <option value="Medium" selected>Medium</option>
+              <option value="Long">Long</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="button-row">
+          <button id="generate-btn" class="btn-primary">Generate Review</button>
+          <button id="reset-btn" class="btn-secondary">Clear / Reset</button>
+        </div>
+      </section>
+
+      <section class="output-section card">
+        <div class="output-header">
+          <h2>Generated Review</h2>
+          <div class="output-actions">
+            <button id="copy-btn" class="btn-icon" title="Copy to clipboard" disabled>
+              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+                <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+              </svg>
+              Copy
+            </button>
+          </div>
+        </div>
+
+        <div id="output-meta" class="output-meta hidden">
+          <span id="meta-model"></span>
+          <span id="meta-tokens"></span>
+        </div>
+
+        <div id="output-panel" class="output-panel">
+          <div class="placeholder">
+            <svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+              <polyline points="14 2 14 8 20 8"></polyline>
+              <line x1="16" y1="13" x2="8" y2="13"></line>
+              <line x1="16" y1="17" x2="8" y2="17"></line>
+              <polyline points="10 9 9 9 8 9"></polyline>
+            </svg>
+            <p>Fill in the product details and click <strong>Generate Review</strong> to get started.</p>
+          </div>
+        </div>
+
+        <div id="loading" class="loading hidden">
+          <div class="spinner"></div>
+          <span>Generating review…</span>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>
