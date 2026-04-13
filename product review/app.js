@@ -45,9 +45,8 @@ keyInput.addEventListener('input', () => {
 
 // Show/hide key
 eyeBtn.addEventListener('click', () => {
-  const isPassword = keyInput.type === 'password';
-  keyInput.type = isPassword ? 'text' : 'password';
-  eyeBtn.querySelector('svg').style.opacity = isPassword ? '0.5' : '1';
+  const masked = keyInput.classList.toggle('masked');
+  eyeBtn.querySelector('svg').style.opacity = masked ? '1' : '0.5';
 });
 
 // Upload .env file button

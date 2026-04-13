@@ -142,6 +142,11 @@ header h1 {
 
 .eye-btn:hover { color: var(--text); }
 
+.key-input-wrap input.masked {
+  -webkit-text-security: disc;
+  text-security: disc;
+}
+
 .key-or {
   color: var(--text-muted);
   font-size: 0.8rem;
