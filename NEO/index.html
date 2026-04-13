@@ -636,8 +636,8 @@
         <select id="ex-sort">
           <option value="dist">Closest Approach</option>
           <option value="h">Largest Object</option>
-          <option value="v-rel">Fastest</option>
-          <option value="date">Soonest</option>
+          <option value="v_rel">Fastest</option>
+          <option value="cd">Soonest</option>
         </select>
       </div>
       <button class="btn" onclick="searchExplorer()">Search</button>
@@ -1006,7 +1006,7 @@ async function searchExplorer() {
   const diamKm = diamM ? (parseFloat(diamM) / 1000).toString() : null;
 
   let url = `https://ssd-api.jpl.nasa.gov/cad.api?body=Earth&date-min=${start}&date-max=${end}&dist-max=${distAU}&sort=${sort}&limit=500`;
-  if (diamKm) url += `&diameter=${diamKm}`;
+  if (diamKm) url += `&diameter-min=${diamKm}`;
 
   showSpinner('ex-results');
 
@@ -1014,6 +1014,7 @@ async function searchExplorer() {
     const res  = await fetch(url);
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
     const json = await res.json();
+    if (json.message) throw new Error(json.message);
 
     if (!json.data || json.data.length === 0) {
       document.getElementById('ex-results').innerHTML = `
@@ -1131,10 +1132,17 @@ async function loadSentry() {
   showSpinner('s-list');
 
   try {
-    const res  = await fetch('https://ssd-api.jpl.nasa.gov/sentry.api?all=1');
+    const res  = await fetch('https://ssd-api.jpl.nasa.gov/sentry.api?all=1&ps-min=-10');
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
     const json = await res.json();
+    if (json.message) throw new Error(json.message);
     sentryRows = json.data || [];
+    // Normalise field names: older API uses ts_max/ps_cum, newer may use ts/ps
+    sentryRows = sentryRows.map(r => ({
+      ...r,
+      ts_max: r.ts_max ?? r.ts,
+      ps_cum: r.ps_cum ?? r.ps,
+    }));
 
     renderSentryStats();
     // Default sort: impact probability descending
@@ -1253,22 +1261,7 @@ function initGlobe() {
     .backgroundColor('#0d0a12')
     .atmosphereColor('#ff6eb4')
     .atmosphereAltitude(0.15)
-    .globeImageUrl('https://unpkg.com/three-globe/example/img/earth-dark.jpg')
-    .onPointClick(pt => {
-      if (!pt || pt._moon) return;
-      const tt = document.getElementById('globe-tt');
-      document.getElementById('tt-name').textContent   = pt.name;
-      document.getElementById('tt-date').textContent   = pt.date;
-      document.getElementById('tt-dist').textContent   = `${pt.distLD.toFixed(3)} LD (${fmtKm(pt.distKm)})`;
-      document.getElementById('tt-diam').textContent   =
-        `${(pt.diamMinKm*1000).toFixed(0)}–${(pt.diamMaxKm*1000).toFixed(0)} m`;
-      document.getElementById('tt-vel').textContent    = `${pt.vel.toFixed(2)} km/s`;
-      const statusEl = document.getElementById('tt-status');
-      statusEl.textContent = pt.pha ? '⚠ Potentially Hazardous' : '✓ Safe Flyby';
-      statusEl.style.color = pt.pha ? 'var(--danger)' : 'var(--safe)';
-      tt.style.display = 'block';
-    })
-    .onPointHover(pt => { el.style.cursor = pt ? 'pointer' : 'default'; });
+    .globeImageUrl('https://unpkg.com/three-globe/example/img/earth-dark.jpg');
 
   // Auto-rotate; pause on drag, resume after 2 s
   const ctrl = globe.controls();
@@ -1280,6 +1273,20 @@ function initGlobe() {
   renderGlobe();
 }
 
+function showGlobeTooltip(pt) {
+  const tt = document.getElementById('globe-tt');
+  document.getElementById('tt-name').textContent  = pt.name;
+  document.getElementById('tt-date').textContent  = pt.date;
+  document.getElementById('tt-dist').textContent  = `${pt.distLD.toFixed(3)} LD (${fmtKm(pt.distKm)})`;
+  document.getElementById('tt-diam').textContent  =
+    `${(pt.diamMinKm*1000).toFixed(0)}–${(pt.diamMaxKm*1000).toFixed(0)} m`;
+  document.getElementById('tt-vel').textContent   = `${pt.vel.toFixed(2)} km/s`;
+  const statusEl = document.getElementById('tt-status');
+  statusEl.textContent = pt.pha ? '⚠ Potentially Hazardous' : '✓ Safe Flyby';
+  statusEl.style.color = pt.pha ? 'var(--danger)' : 'var(--safe)';
+  tt.style.display = 'block';
+}
+
 function renderGlobe() {
   if (!globe) return;
 
@@ -1287,31 +1294,58 @@ function renderGlobe() {
   const moon = [{
     _moon: true, name: '🌕 Moon (1 LD)',
     lat: 23.5, lng: 45, alt: ldToAlt(1),
-    color: '#e0e0f0', size: 0.55,
+    color: '#e0e0f0',
   }];
 
   const pts = neowsAsteroids.map(a => {
     const { lat, lng } = seededPos(a.id);
-    return { ...a, lat, lng, alt: ldToAlt(a.distLD), color: a.pha ? '#ff4466' : '#c084fc', size: a.pha ? 0.55 : 0.38 };
+    return { ...a, lat, lng, alt: ldToAlt(a.distLD), color: a.pha ? '#ff4466' : '#c084fc' };
   });
 
   const all = [...moon, ...pts];
 
+  // htmlElementsData renders each marker as a floating HTML dot at its altitude —
+  // no pillar/cylinder from the surface.
   globe
-    .pointsData(all)
-    .pointLat('lat')
-    .pointLng('lng')
-    .pointAltitude('alt')
-    .pointColor('color')
-    .pointRadius('size')
-    .pointLabel(d => d._moon ? '🌕 Moon (1 LD)' : `${d.name}<br>${d.distLD?.toFixed(2)} LD`);
+    .htmlElementsData(all)
+    .htmlLat('lat')
+    .htmlLng('lng')
+    .htmlAltitude('alt')
+    .htmlElement(d => {
+      const el  = document.createElement('div');
+      const sz  = d._moon ? 14 : (d.pha ? 12 : 9);
+      const col = d.color;
+      el.style.cssText = [
+        `width:${sz}px`,
+        `height:${sz}px`,
+        'border-radius:50%',
+        `background:${col}`,
+        `box-shadow:0 0 ${sz * 1.5}px ${col}`,
+        `cursor:${d._moon ? 'default' : 'pointer'}`,
+        'pointer-events:auto',
+        'transition:transform 0.15s',
+      ].join(';');
+
+      if (d._moon) {
+        el.title = '🌕 Moon (1 LD)';
+      } else {
+        el.addEventListener('mouseenter', () => { el.style.transform = 'scale(1.6)'; });
+        el.addEventListener('mouseleave', () => { el.style.transform = 'scale(1)'; });
+        el.addEventListener('click', e => { e.stopPropagation(); showGlobeTooltip(d); });
+      }
+      return el;
+    });
 
   // If no NeoWs data yet, show a hint
   if (!neowsAsteroids.length) {
-    const hint = document.createElement('div');
-    hint.style.cssText = 'position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);text-align:center;color:var(--muted);font-size:0.9rem;pointer-events:none';
-    hint.innerHTML = '<div style="font-family:Orbitron,monospace;font-size:0.8rem;color:var(--blush);margin-bottom:.5rem">No asteroid data</div>Load the 🪐 This Week tab first to populate the globe.';
-    document.getElementById('globe-wrap').appendChild(hint);
+    const wrap = document.getElementById('globe-wrap');
+    if (!wrap.querySelector('.globe-no-data')) {
+      const hint = document.createElement('div');
+      hint.className = 'globe-no-data';
+      hint.style.cssText = 'position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);text-align:center;color:var(--muted);font-size:0.9rem;pointer-events:none';
+      hint.innerHTML = '<div style="font-family:Orbitron,monospace;font-size:0.8rem;color:var(--blush);margin-bottom:.5rem">No asteroid data</div>Load the 🪐 This Week tab first to populate the globe.';
+      wrap.appendChild(hint);
+    }
   }
 }
 
