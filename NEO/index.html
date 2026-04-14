@@ -701,10 +701,11 @@ const AU_TO_KM  = 149597870.7;
 const LD_TO_KM  = 384400;
 const AU_TO_LD  = AU_TO_KM / LD_TO_KM; // ≈ 389.17
 
-// JPL SSD APIs (ssd-api.jpl.nasa.gov) don't send CORS headers, so
-// browser fetches from GitHub Pages are blocked. Route them through
-// allorigins.win which adds Access-Control-Allow-Origin: *.
-const CORS_PROXY = 'https://api.allorigins.win/raw?url=';
+// JPL SSD APIs (ssd-api.jpl.nasa.gov) don't send CORS headers, so browser
+// fetches from GitHub Pages are blocked. corsproxy.io forwards requests and
+// injects Access-Control-Allow-Origin: * — it requires a real browser Referer,
+// which the browser sends automatically when the page is on GitHub Pages.
+const CORS_PROXY = 'https://corsproxy.io/?';
 function jplFetch(url) {
   return fetch(CORS_PROXY + encodeURIComponent(url));
 }
@@ -1140,17 +1141,13 @@ async function loadSentry() {
   showSpinner('s-list');
 
   try {
-    const res  = await jplFetch('https://ssd-api.jpl.nasa.gov/sentry.api?all=1&ps-min=-10');
+    // ps-min=-5 returns ~200 objects with full fields (diameter, v_inf, n_imp).
+    // Avoids the 6.8 MB "all=1" payload that proxies can't handle.
+    const res  = await jplFetch('https://ssd-api.jpl.nasa.gov/sentry.api?ps-min=-5');
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
     const json = await res.json();
     if (json.message) throw new Error(json.message);
     sentryRows = json.data || [];
-    // Normalise field names: older API uses ts_max/ps_cum, newer may use ts/ps
-    sentryRows = sentryRows.map(r => ({
-      ...r,
-      ts_max: r.ts_max ?? r.ts,
-      ps_cum: r.ps_cum ?? r.ps,
-    }));
 
     renderSentryStats();
     // Default sort: impact probability descending
