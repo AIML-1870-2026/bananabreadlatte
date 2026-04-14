@@ -702,12 +702,11 @@ const LD_TO_KM  = 384400;
 const AU_TO_LD  = AU_TO_KM / LD_TO_KM; // ≈ 389.17
 
 // JPL SSD APIs (ssd-api.jpl.nasa.gov) don't send CORS headers, so browser
-// fetches from GitHub Pages are blocked. corsproxy.io forwards requests and
-// injects Access-Control-Allow-Origin: * — it requires a real browser Referer,
-// which the browser sends automatically when the page is on GitHub Pages.
-const CORS_PROXY = 'https://corsproxy.io/?';
+// fetches from GitHub Pages are blocked. Route through codetabs proxy which
+// injects Access-Control-Allow-Origin: * and works with no auth required.
+const CORS_PROXY = 'https://api.codetabs.com/v1/proxy/?quest=';
 function jplFetch(url) {
-  return fetch(CORS_PROXY + encodeURIComponent(url));
+  return fetch(CORS_PROXY + url);
 }
 
 // ──────────────────────────────────────────────────────────────
