@@ -1,0 +1,922 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Science Experiment Generator</title>
+<script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --bg: #fff0f5;
+  --surface: #ffffff;
+  --primary: #e0527a;
+  --primary-dark: #b5294f;
+  --accent: #fce4ec;
+  --accent2: #fff5f8;
+  --text: #5c1a30;
+  --text-muted: #a05070;
+  --border: #f4b8cc;
+  --error-bg: #fff0f0;
+  --error-border: #f4a0a0;
+  --error-text: #8b1a1a;
+  --shadow: 0 4px 20px rgba(224,82,122,0.10);
+  --shadow-hover: 0 8px 32px rgba(224,82,122,0.20);
+  --radius: 18px;
+  --radius-sm: 10px;
+  --radius-pill: 999px;
+  --font: "Century Schoolbook", "Book Antiqua", "Palatino Linotype", Georgia, serif;
+}
+
+body {
+  font-family: var(--font);
+  background: var(--bg);
+  color: var(--text);
+  min-height: 100vh;
+  font-size: 15px;
+}
+
+/* ── HEADER ── */
+header {
+  background: linear-gradient(135deg, #f9a8c9 0%, #e0527a 50%, #b5294f 100%);
+  padding: 16px 28px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  box-shadow: 0 2px 16px rgba(224,82,122,0.28);
+  position: sticky;
+  top: 0;
+  z-index: 100;
+}
+header .icon { font-size: 1.7rem; line-height: 1; }
+header h1 {
+  color: #fff;
+  font-size: 1.4rem;
+  font-weight: 700;
+  letter-spacing: -0.3px;
+  text-shadow: 0 1px 4px rgba(0,0,0,0.18);
+}
+
+/* ── TAB BAR ── */
+.tab-bar {
+  background: var(--surface);
+  border-bottom: 2px solid var(--border);
+  display: flex;
+  gap: 0;
+  padding: 0 24px;
+  position: sticky;
+  top: 57px;
+  z-index: 99;
+  box-shadow: 0 2px 8px rgba(224,82,122,0.06);
+}
+.tab-btn {
+  background: none;
+  border: none;
+  border-bottom: 3px solid transparent;
+  padding: 14px 22px 12px;
+  font-family: var(--font);
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: var(--text-muted);
+  cursor: pointer;
+  transition: color 0.18s, border-color 0.18s;
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  margin-bottom: -2px;
+}
+.tab-btn:hover { color: var(--primary); }
+.tab-btn.active { color: var(--primary-dark); border-bottom-color: var(--primary); }
+.tab-badge {
+  background: var(--primary);
+  color: #fff;
+  font-size: 0.68rem;
+  font-weight: 700;
+  padding: 1px 7px;
+  border-radius: var(--radius-pill);
+  min-width: 20px;
+  text-align: center;
+}
+.tab-badge.hidden { display: none; }
+
+/* ── LAYOUT ── */
+.app-container {
+  max-width: 800px;
+  margin: 0 auto;
+  padding: 28px 18px 60px;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+.tab-panel { display: none; flex-direction: column; gap: 20px; }
+.tab-panel.active { display: flex; }
+
+/* ── CARD ── */
+.card {
+  background: var(--surface);
+  border: 1.5px solid var(--border);
+  border-radius: var(--radius);
+  padding: 22px 24px;
+  box-shadow: var(--shadow);
+}
+.card-title {
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--primary);
+  margin-bottom: 16px;
+}
+
+/* ── API KEY ── */
+.key-row { display: flex; align-items: center; gap: 10px; }
+.key-input-wrap { position: relative; flex: 1; }
+.key-input-wrap input {
+  width: 100%;
+  padding: 10px 40px 10px 14px;
+  border: 1.5px solid var(--border);
+  border-radius: var(--radius-sm);
+  font-family: var(--font);
+  font-size: 0.82rem;
+  color: var(--text);
+  background: var(--accent2);
+  outline: none;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+.key-input-wrap input:focus { border-color: var(--primary); box-shadow: 0 0 0 3px rgba(224,82,122,0.15); }
+.eye-btn {
+  position: absolute; right: 10px; top: 50%; transform: translateY(-50%);
+  background: none; border: none; cursor: pointer; font-size: 1rem; opacity: 0.6;
+}
+.eye-btn:hover { opacity: 1; }
+.upload-btn {
+  white-space: nowrap; padding: 10px 14px;
+  background: var(--accent); border: 1.5px solid var(--border);
+  border-radius: var(--radius-sm); color: var(--primary-dark);
+  font-family: var(--font); font-weight: 700; font-size: 0.8rem;
+  cursor: pointer; transition: background 0.18s, border-color 0.18s;
+}
+.upload-btn:hover { background: #f9ccd8; border-color: var(--primary); }
+.key-status {
+  display: inline-flex; align-items: center; gap: 6px;
+  margin-top: 8px; font-size: 0.76rem; font-weight: 700; color: var(--text-muted);
+}
+.dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; }
+.dot.active { background: #22c55e; }
+.dot.inactive { background: #d1d5db; }
+.privacy-note { margin-top: 6px; font-size: 0.72rem; color: var(--text-muted); }
+
+/* ── SETTINGS GRID ── */
+.settings-top { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; margin-bottom: 20px; }
+@media (max-width: 520px) { .settings-top { grid-template-columns: 1fr; } }
+.form-field label {
+  display: block; font-weight: 700; font-size: 0.82rem;
+  color: var(--text-muted); margin-bottom: 8px; letter-spacing: 0.02em;
+}
+select, textarea {
+  width: 100%; border: 1.5px solid var(--border); border-radius: var(--radius-sm);
+  font-family: var(--font); font-size: 0.9rem; color: var(--text);
+  background: var(--accent2); outline: none;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+select:focus, textarea:focus { border-color: var(--primary); box-shadow: 0 0 0 3px rgba(224,82,122,0.15); }
+select {
+  padding: 10px 32px 10px 12px; cursor: pointer; appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%23a05070' d='M6 8L1 3h10z'/%3E%3C/svg%3E");
+  background-repeat: no-repeat; background-position: right 11px center;
+}
+textarea { padding: 10px 14px; resize: vertical; min-height: 80px; line-height: 1.55; }
+
+/* ── DIFFICULTY PILLS ── */
+.diff-group { display: flex; gap: 7px; flex-wrap: wrap; }
+.diff-btn {
+  padding: 7px 14px; border-radius: var(--radius-pill);
+  border: 1.5px solid var(--border); background: var(--accent2);
+  font-family: var(--font); font-size: 0.8rem; font-weight: 700;
+  color: var(--text-muted); cursor: pointer; transition: all 0.18s;
+}
+.diff-btn:hover { border-color: var(--primary); color: var(--primary); }
+.diff-btn.active { background: var(--primary); border-color: var(--primary); color: #fff; }
+
+/* ── SUPPLIES GRID ── */
+.supplies-section-label {
+  font-weight: 700; font-size: 0.82rem; color: var(--text-muted);
+  margin-bottom: 10px; margin-top: 20px; display: block;
+}
+.supplies-section-label span { font-weight: 400; }
+.supplies-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(82px, 1fr));
+  gap: 8px;
+  margin-bottom: 16px;
+}
+.supply-chip {
+  display: flex; flex-direction: column; align-items: center; gap: 5px;
+  padding: 10px 6px 8px; border: 1.5px solid var(--border);
+  border-radius: var(--radius-sm); background: var(--accent2);
+  cursor: pointer; transition: all 0.17s; user-select: none; text-align: center;
+}
+.supply-chip:hover { border-color: var(--primary); background: var(--accent); transform: translateY(-1px); }
+.supply-chip.selected {
+  border-color: var(--primary); background: var(--accent);
+  box-shadow: 0 0 0 2px rgba(224,82,122,0.22);
+}
+.supply-emoji { font-size: 1.9rem; line-height: 1; display: block; }
+.supply-label { font-size: 0.65rem; color: var(--text-muted); font-weight: 700; line-height: 1.2; }
+.supply-chip.selected .supply-label { color: var(--primary-dark); }
+.selected-count {
+  font-size: 0.75rem; color: var(--primary-dark); font-weight: 700;
+  margin-bottom: 8px; min-height: 18px;
+}
+
+/* ── GENERATE BUTTON ── */
+.generate-btn {
+  display: block; width: 100%; padding: 14px; margin-top: 18px;
+  background: linear-gradient(135deg, #f472a8, #e0527a);
+  border: none; border-radius: var(--radius-pill); color: #fff;
+  font-family: var(--font); font-size: 1rem; font-weight: 700;
+  letter-spacing: 0.03em; cursor: pointer;
+  transition: opacity 0.2s, transform 0.15s, box-shadow 0.2s;
+  box-shadow: 0 4px 14px rgba(224,82,122,0.35);
+}
+.generate-btn:hover:not(:disabled) {
+  opacity: 0.92; transform: translateY(-1px);
+  box-shadow: 0 6px 20px rgba(224,82,122,0.42);
+}
+.generate-btn:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+
+/* ── OUTPUT BADGES ── */
+.output-meta { display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px; flex-wrap: wrap; gap: 10px; }
+.badge-group { display: flex; gap: 7px; flex-wrap: wrap; }
+.badge {
+  padding: 4px 13px; border-radius: var(--radius-pill);
+  font-size: 0.72rem; font-weight: 700; border: 1.5px solid transparent;
+}
+.badge-grade { background: var(--accent); color: var(--primary-dark); border-color: var(--border); }
+.badge-easy { background: #dcfce7; color: #15803d; border-color: #bbf7d0; }
+.badge-medium { background: #fef9c3; color: #854d0e; border-color: #fde68a; }
+.badge-hard { background: #fee2e2; color: #991b1b; border-color: #fca5a5; }
+.badge-advanced { background: #ede9fe; color: #5b21b6; border-color: #c4b5fd; }
+.saved-indicator { font-size: 0.76rem; color: #15803d; font-weight: 700; opacity: 0; transition: opacity 0.4s; }
+.saved-indicator.show { opacity: 1; }
+
+/* ── EXPERIMENT CONTENT ── */
+.experiment-content { line-height: 1.72; color: var(--text); }
+.experiment-content h1, .experiment-content h2, .experiment-content h3 {
+  font-family: var(--font); margin-top: 1.3em; margin-bottom: 0.4em; color: var(--primary-dark);
+}
+.experiment-content h1 { font-size: 1.35rem; }
+.experiment-content h2 { font-size: 1.1rem; border-bottom: 2px solid var(--border); padding-bottom: 4px; }
+.experiment-content h3 { font-size: 0.98rem; }
+.experiment-content h1:first-child, .experiment-content h2:first-child, .experiment-content h3:first-child { margin-top: 0; }
+.experiment-content p { margin-bottom: 0.8em; }
+.experiment-content ul, .experiment-content ol { padding-left: 1.5em; margin-bottom: 0.8em; }
+.experiment-content li { margin-bottom: 0.3em; }
+.experiment-content strong { color: var(--primary-dark); }
+.experiment-content code { background: var(--accent2); border: 1px solid var(--border); border-radius: 4px; padding: 1px 5px; font-size: 0.85em; }
+
+/* ── ACTION BAR ── */
+.action-bar { display: flex; gap: 10px; margin-top: 22px; flex-wrap: wrap; }
+.action-btn {
+  padding: 9px 18px; border: 1.5px solid var(--border);
+  border-radius: var(--radius-pill); background: var(--accent);
+  color: var(--primary-dark); font-family: var(--font);
+  font-size: 0.82rem; font-weight: 700; cursor: pointer;
+  transition: background 0.18s, border-color 0.18s, transform 0.15s;
+}
+.action-btn:hover { background: #f9ccd8; border-color: var(--primary); transform: translateY(-1px); }
+.action-btn:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+.action-btn.danger { color: var(--error-text); border-color: var(--error-border); background: var(--error-bg); }
+.action-btn.danger:hover { background: #fecdd3; }
+
+/* ── SUBSTITUTIONS PANEL ── */
+.sub-panel {
+  margin-top: 18px; padding: 18px 20px;
+  background: var(--accent2); border: 1.5px solid var(--border);
+  border-radius: var(--radius-sm);
+}
+.sub-panel h3 { font-size: 0.85rem; color: var(--primary-dark); margin-bottom: 12px; }
+.sub-panel .sub-content { font-size: 0.88rem; line-height: 1.65; }
+.sub-panel .sub-content strong { color: var(--primary-dark); }
+.sub-spinner { display: inline-block; width: 16px; height: 16px; border: 2px solid var(--border); border-top-color: var(--primary); border-radius: 50%; animation: spin 0.7s linear infinite; margin-right: 8px; vertical-align: middle; }
+
+/* ── LOADING ── */
+.loading-wrap { display: flex; align-items: center; gap: 12px; color: var(--text-muted); font-weight: 700; font-size: 0.9rem; }
+.spinner { width: 22px; height: 22px; border: 3px solid var(--border); border-top-color: var(--primary); border-radius: 50%; animation: spin 0.75s linear infinite; flex-shrink: 0; }
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* ── ERROR ── */
+.error-box {
+  background: var(--error-bg); border: 1.5px solid var(--error-border);
+  border-radius: var(--radius-sm); padding: 14px 18px;
+  color: var(--error-text); font-size: 0.9rem; line-height: 1.5;
+}
+.error-box strong { display: block; margin-bottom: 4px; }
+
+/* ── HISTORY ── */
+.history-empty { color: var(--text-muted); font-size: 0.9rem; padding: 12px 0; }
+.history-list { display: flex; flex-direction: column; gap: 12px; }
+.history-entry { border: 1.5px solid var(--border); border-radius: var(--radius-sm); overflow: hidden; background: var(--accent2); }
+.history-header {
+  display: flex; align-items: center; gap: 10px;
+  padding: 14px 16px; cursor: pointer; user-select: none;
+  transition: background 0.18s;
+}
+.history-header:hover { background: var(--accent); }
+.history-title { font-weight: 700; font-size: 0.9rem; flex: 1; color: var(--text); }
+.history-meta { display: flex; align-items: center; gap: 7px; flex-shrink: 0; flex-wrap: wrap; }
+.history-date { font-size: 0.72rem; color: var(--text-muted); }
+.chevron { font-size: 0.75rem; color: var(--text-muted); transition: transform 0.2s; flex-shrink: 0; }
+.history-entry.expanded .chevron { transform: rotate(180deg); }
+.history-body {
+  display: none; padding: 20px; border-top: 1.5px solid var(--border);
+  background: var(--surface);
+}
+.history-entry.expanded .history-body { display: block; }
+.history-actions { display: flex; gap: 8px; margin-top: 16px; }
+.history-clear-bar { display: flex; justify-content: flex-end; margin-top: 16px; padding-top: 14px; border-top: 1px solid var(--border); }
+
+/* ── WORKSHEET (print only) ── */
+.worksheet { display: none; }
+
+/* ── PRINT STYLES ── */
+@media print {
+  header, .tab-bar, #tab-generate > .card:not(#output-card),
+  .action-bar, .sub-panel, .output-meta .saved-indicator { display: none !important; }
+  #output-card { display: block !important; box-shadow: none !important; border: none !important; padding: 0 !important; }
+  .output-meta { display: none !important; }
+  .experiment-content { font-size: 11pt; color: black !important; }
+  .experiment-content h1 { font-size: 16pt; color: black !important; }
+  .experiment-content h2 { font-size: 13pt; color: black !important; border-bottom: 1pt solid #aaa !important; }
+  .experiment-content strong { color: black !important; }
+  .worksheet { display: block !important; margin-top: 28pt; }
+  body { background: white !important; color: black !important; font-size: 11pt; }
+  .app-container { padding: 0 !important; max-width: 100% !important; }
+  .tab-panel { display: flex !important; }
+}
+
+/* Worksheet print layout */
+.worksheet { page-break-before: always; }
+.ws-title { font-size: 16pt; font-weight: 700; margin-bottom: 18pt; border-bottom: 2pt solid black; padding-bottom: 6pt; }
+.ws-row { display: flex; gap: 24pt; margin-bottom: 14pt; }
+.ws-field { flex: 1; }
+.ws-field label { font-size: 9pt; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; display: block; margin-bottom: 4pt; }
+.ws-line { border-bottom: 1pt solid #555; height: 20pt; margin-bottom: 6pt; }
+.ws-lines { display: flex; flex-direction: column; gap: 6pt; }
+.ws-section { margin-top: 18pt; }
+.ws-section-title { font-size: 11pt; font-weight: 700; margin-bottom: 10pt; }
+.ws-table { width: 100%; border-collapse: collapse; font-size: 10pt; }
+.ws-table th { background: #f0f0f0; border: 1pt solid #888; padding: 5pt 8pt; text-align: left; font-weight: 700; }
+.ws-table td { border: 1pt solid #888; padding: 5pt 8pt; height: 36pt; vertical-align: top; }
+.ws-table td:first-child { width: 50pt; text-align: center; }
+</style>
+</head>
+<body>
+
+<header>
+  <span class="icon">&#128300;</span>
+  <h1>Science Experiment Generator</h1>
+</header>
+
+<div class="tab-bar">
+  <button class="tab-btn active" id="tabGenBtn" onclick="switchTab('generate')">Generate</button>
+  <button class="tab-btn" id="tabHistBtn" onclick="switchTab('history')">
+    History <span class="tab-badge hidden" id="histBadge">0</span>
+  </button>
+</div>
+
+<div class="app-container">
+
+  <!-- ── GENERATE TAB ── -->
+  <div class="tab-panel active" id="tab-generate">
+
+    <!-- API Key -->
+    <div class="card">
+      <div class="card-title">OpenAI API Key</div>
+      <div class="key-row">
+        <div class="key-input-wrap">
+          <input type="password" id="apiKeyInput" placeholder="sk-…" autocomplete="off" oninput="updateKeyStatus()" />
+          <button class="eye-btn" onclick="toggleKeyVisibility()" title="Show/hide">&#128065;</button>
+        </div>
+        <button class="upload-btn" onclick="document.getElementById('envFileInput').click()">&#128206; .env</button>
+        <input type="file" id="envFileInput" accept=".env,.txt" style="display:none" onchange="parseEnvFile(event)" />
+      </div>
+      <div id="keyStatus" class="key-status"><span class="dot inactive"></span> No key loaded</div>
+      <p class="privacy-note">Key is held in memory only — never saved to disk or localStorage.</p>
+    </div>
+
+    <!-- Settings -->
+    <div class="card">
+      <div class="card-title">Experiment Settings</div>
+
+      <div class="settings-top">
+        <div class="form-field">
+          <label for="gradeSelect">Grade Level</label>
+          <select id="gradeSelect">
+            <option value="K-2">K&ndash;2</option>
+            <option value="3-5">3&ndash;5</option>
+            <option value="6-8" selected>6&ndash;8</option>
+            <option value="9-12">9&ndash;12</option>
+          </select>
+        </div>
+        <div class="form-field">
+          <label>Difficulty</label>
+          <div class="diff-group">
+            <button class="diff-btn" onclick="setDifficulty('Easy')">Easy</button>
+            <button class="diff-btn active" onclick="setDifficulty('Medium')">Medium</button>
+            <button class="diff-btn" onclick="setDifficulty('Hard')">Hard</button>
+            <button class="diff-btn" onclick="setDifficulty('Advanced')">Advanced</button>
+          </div>
+        </div>
+      </div>
+
+      <label class="supplies-section-label">
+        Common Household Supplies <span>(tap to select)</span>
+      </label>
+      <div class="selected-count" id="selectedCount"></div>
+      <div class="supplies-grid" id="suppliesGrid"></div>
+
+      <div class="form-field">
+        <label for="suppliesInput">Additional Supplies</label>
+        <textarea id="suppliesInput" placeholder="Type any other materials you have on hand…"></textarea>
+      </div>
+
+      <button class="generate-btn" id="generateBtn" onclick="generate()">Generate Experiment</button>
+    </div>
+
+    <!-- Output -->
+    <div class="card" id="output-card" style="display:none">
+      <div class="output-meta">
+        <div class="badge-group" id="outputBadges"></div>
+        <span class="saved-indicator" id="savedIndicator">&#10003; Saved to history</span>
+      </div>
+      <div id="output-body"></div>
+      <div class="action-bar" id="actionBar" style="display:none">
+        <button class="action-btn" id="subBtn" onclick="suggestSubstitutions()">&#129300; Suggest Substitutions</button>
+        <button class="action-btn" onclick="window.print()">&#128424; Print Worksheet</button>
+      </div>
+      <div class="sub-panel" id="subPanel" style="display:none">
+        <h3>Supply Substitutions</h3>
+        <div class="sub-content" id="subContent"></div>
+      </div>
+      <!-- Worksheet rendered here, visible only when printing -->
+      <div class="worksheet" id="worksheetArea"></div>
+    </div>
+
+  </div><!-- /tab-generate -->
+
+  <!-- ── HISTORY TAB ── -->
+  <div class="tab-panel" id="tab-history">
+    <div class="card">
+      <div class="card-title">Saved Experiments</div>
+      <div id="historyList"></div>
+    </div>
+  </div>
+
+</div><!-- /app-container -->
+
+<script>
+marked.setOptions({ breaks: true, gfm: true });
+
+// ── STATE ────────────────────────────────────────────────────────────────────
+let apiKey      = '';
+let difficulty  = 'Medium';
+let selected    = new Set();   // selected supply chip names
+let currentExp  = null;        // { grade, difficulty, supplies, content, title }
+
+let history = [];
+try { history = JSON.parse(localStorage.getItem('expHistory') || '[]'); } catch(e) {}
+
+// ── SUPPLIES DATA ─────────────────────────────────────────────────────────────
+const SUPPLIES = [
+  { emoji: '🧪', name: 'Baking Soda'    },
+  { emoji: '🍶', name: 'Vinegar'        },
+  { emoji: '💧', name: 'Water'          },
+  { emoji: '🧂', name: 'Salt'           },
+  { emoji: '🍬', name: 'Sugar'          },
+  { emoji: '🎨', name: 'Food Coloring'  },
+  { emoji: '🎈', name: 'Balloons'       },
+  { emoji: '🍼', name: 'Plastic Bottles'},
+  { emoji: '🥛', name: 'Milk'           },
+  { emoji: '🥚', name: 'Eggs'           },
+  { emoji: '🍋', name: 'Lemon Juice'    },
+  { emoji: '🫧', name: 'Dish Soap'      },
+  { emoji: '🫙', name: 'Vegetable Oil'  },
+  { emoji: '🌽', name: 'Cornstarch'     },
+  { emoji: '🧊', name: 'Ice'            },
+  { emoji: '📎', name: 'Paper Clips'    },
+  { emoji: '🪙', name: 'Aluminum Foil'  },
+  { emoji: '✂️', name: 'Scissors'       },
+  { emoji: '📦', name: 'Cardboard'      },
+  { emoji: '🧵', name: 'String'         },
+  { emoji: '🥤', name: 'Straws'         },
+  { emoji: '🕯️', name: 'Candles'        },
+  { emoji: '🔦', name: 'Flashlight'     },
+  { emoji: '🧲', name: 'Magnets'        },
+  { emoji: '📄', name: 'Paper'          },
+  { emoji: '✏️', name: 'Pencils'        },
+  { emoji: '🪴', name: 'Soil'           },
+  { emoji: '🌱', name: 'Seeds'          },
+  { emoji: '☕', name: 'Coffee Filters' },
+  { emoji: '🧻', name: 'Paper Towels'   },
+];
+
+// ── GRADE DESCRIPTIONS ────────────────────────────────────────────────────────
+const GRADE_DESC = {
+  'K-2':  'kindergarten through 2nd grade (ages 5–8). Use very simple language, very short numbered steps, and focus on sensory observation. Avoid any heat, sharp tools, or chemicals.',
+  '3-5':  '3rd through 5th grade (ages 8–11). Introduce basic scientific vocabulary, simple measurements, and the concept of a variable. Students can record observations in a table.',
+  '6-8':  '6th through 8th grade (ages 11–14). Include hypothesis formation, independent/dependent variables, a data table, and a brief analysis. Introduce relevant scientific concepts.',
+  '9-12': '9th through 12th grade (ages 14–18). Expect the full scientific method: hypothesis, variables, controlled design, quantitative data collection, analysis, sources of error, and real-world connections.',
+};
+
+const DIFF_DESC = {
+  'Easy':     'Keep the experiment very straightforward — minimal steps, easy-to-follow instructions, and an obvious outcome.',
+  'Medium':   'Use a moderate level of complexity — a few variables to track and some data to record.',
+  'Hard':     'Make it challenging — multiple steps, careful measurement, and a thorough analysis section.',
+  'Advanced': 'Design a rigorous experiment — full scientific method, quantitative analysis, error discussion, and connections to real-world science or research.',
+};
+
+// ── INIT ──────────────────────────────────────────────────────────────────────
+(function init() {
+  // Build supply grid
+  const grid = document.getElementById('suppliesGrid');
+  SUPPLIES.forEach(s => {
+    const chip = document.createElement('div');
+    chip.className = 'supply-chip';
+    chip.dataset.name = s.name;
+    chip.innerHTML = `<span class="supply-emoji">${s.emoji}</span><span class="supply-label">${s.name}</span>`;
+    chip.addEventListener('click', () => toggleSupply(s.name, chip));
+    grid.appendChild(chip);
+  });
+
+  renderHistory();
+  updateHistoryBadge();
+})();
+
+// ── TABS ──────────────────────────────────────────────────────────────────────
+function switchTab(tab) {
+  document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById('tab-' + tab).classList.add('active');
+  document.getElementById(tab === 'generate' ? 'tabGenBtn' : 'tabHistBtn').classList.add('active');
+}
+
+// ── DIFFICULTY ────────────────────────────────────────────────────────────────
+function setDifficulty(d) {
+  difficulty = d;
+  document.querySelectorAll('.diff-btn').forEach(btn => {
+    btn.classList.toggle('active', btn.textContent === d);
+  });
+}
+
+// ── SUPPLY CHIPS ─────────────────────────────────────────────────────────────
+function toggleSupply(name, chip) {
+  if (selected.has(name)) {
+    selected.delete(name);
+    chip.classList.remove('selected');
+  } else {
+    selected.add(name);
+    chip.classList.add('selected');
+  }
+  updateSelectedCount();
+}
+
+function updateSelectedCount() {
+  const el = document.getElementById('selectedCount');
+  el.textContent = selected.size > 0
+    ? `${selected.size} selected: ${[...selected].join(', ')}`
+    : '';
+}
+
+function clearChips() {
+  selected.clear();
+  document.querySelectorAll('.supply-chip').forEach(c => c.classList.remove('selected'));
+  updateSelectedCount();
+}
+
+// ── API KEY ───────────────────────────────────────────────────────────────────
+function toggleKeyVisibility() {
+  const input = document.getElementById('apiKeyInput');
+  const btn = input.parentElement.querySelector('.eye-btn');
+  input.type = input.type === 'password' ? 'text' : 'password';
+  btn.innerHTML = input.type === 'password' ? '&#128065;' : '&#128584;';
+}
+
+function parseEnvFile(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = e => {
+    const text = e.target.result;
+    const match = text.match(/(?:OPENAI_API_KEY|API_KEY)\s*=\s*([^\s\n"']+)/i);
+    if (match) {
+      document.getElementById('apiKeyInput').value = match[1].trim();
+    } else {
+      const lines = text.split(/\r?\n/).map(l => l.trim()).filter(Boolean);
+      for (const line of lines) {
+        const val = line.split('=').pop().trim().replace(/['"]/g, '');
+        if (val.startsWith('sk-')) { document.getElementById('apiKeyInput').value = val; break; }
+      }
+    }
+    updateKeyStatus();
+  };
+  reader.readAsText(file);
+  event.target.value = '';
+}
+
+function updateKeyStatus() {
+  apiKey = document.getElementById('apiKeyInput').value.trim();
+  const el = document.getElementById('keyStatus');
+  el.innerHTML = apiKey
+    ? '<span class="dot active"></span> Key loaded'
+    : '<span class="dot inactive"></span> No key loaded';
+}
+
+// ── OPENAI CALL ───────────────────────────────────────────────────────────────
+async function callOpenAI(messages) {
+  const res = await fetch('https://api.openai.com/v1/chat/completions', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${apiKey}` },
+    body: JSON.stringify({ model: 'gpt-4o', messages, temperature: 0.7 })
+  });
+  if (!res.ok) {
+    let msg = `API error ${res.status}`;
+    try { const d = await res.json(); msg = d.error?.message || msg; } catch(_) {}
+    throw new Error(msg);
+  }
+  const data = await res.json();
+  return data.choices[0].message.content;
+}
+
+// ── GENERATE ──────────────────────────────────────────────────────────────────
+async function generate() {
+  const key = document.getElementById('apiKeyInput').value.trim();
+  if (!key) { showError('Please enter your OpenAI API key.'); return; }
+
+  const grade    = document.getElementById('gradeSelect').value;
+  const extra    = document.getElementById('suppliesInput').value.trim();
+  const chipList = [...selected];
+  const allSupplies = [...chipList, ...(extra ? [extra] : [])].join(', ');
+
+  if (!allSupplies) { showError('Please select or enter at least one supply.'); return; }
+
+  apiKey = key;
+  setLoading(true);
+
+  const system = `You are an experienced science educator creating hands-on experiments for K–12 students.
+Experiments must be safe, engaging, and pedagogically appropriate for the specified grade band.
+Use markdown formatting: # for the experiment title, ## for section headings, **bold** for key terms, and bullet/numbered lists for materials and steps.`;
+
+  const user = `Create one complete science experiment for grade ${grade} (${GRADE_DESC[grade]})
+
+Difficulty level: ${difficulty} — ${DIFF_DESC[difficulty]}
+
+The student has ONLY these materials available:
+${allSupplies}
+
+Return a structured experiment with these sections in order:
+1. Experiment Title (# heading)
+2. Learning Objective — the scientific concept being practiced (## heading)
+3. Materials — only items from the list above that you will use (## heading)
+4. Procedure — clear numbered steps a student can follow independently (## heading)
+5. Expected Results — what the student should observe and why (## heading)
+6. Discussion Questions — ${grade === 'K-2' ? '2–3 simple questions' : grade === '3-5' ? '3–4 questions' : '4–5 questions that prompt analysis and critical thinking'} for grade ${grade} (## heading)
+
+Only use materials from the list. Do not suggest purchasing anything. Use markdown throughout.`;
+
+  try {
+    const content = await callOpenAI([
+      { role: 'system', content: system },
+      { role: 'user',   content: user   }
+    ]);
+
+    currentExp = { grade, difficulty, supplies: allSupplies, content, title: parseTitle(content), date: new Date().toLocaleDateString() };
+    showResult(currentExp);
+    saveToHistory(currentExp);
+
+  } catch (err) {
+    const msg = err.message.includes('Failed to fetch') || err.message.includes('NetworkError')
+      ? 'Network error — check your connection and try again.'
+      : err.message;
+    showError(msg);
+  } finally {
+    setLoading(false);
+  }
+}
+
+function parseTitle(markdown) {
+  const match = markdown.match(/^#\s+(.+)/m);
+  return match ? match[1].replace(/\*\*/g, '').trim() : 'Untitled Experiment';
+}
+
+// ── UI HELPERS ────────────────────────────────────────────────────────────────
+function setLoading(on) {
+  const btn = document.getElementById('generateBtn');
+  const card = document.getElementById('output-card');
+  btn.disabled = on;
+  btn.textContent = on ? 'Generating…' : 'Generate Experiment';
+  if (on) {
+    document.getElementById('output-body').innerHTML =
+      `<div class="loading-wrap"><div class="spinner"></div><span>Designing your experiment…</span></div>`;
+    document.getElementById('actionBar').style.display = 'none';
+    document.getElementById('subPanel').style.display = 'none';
+    document.getElementById('outputBadges').innerHTML = '';
+    document.getElementById('savedIndicator').classList.remove('show');
+    card.style.display = 'block';
+  }
+}
+
+function showResult(exp) {
+  document.getElementById('output-card').style.display = 'block';
+  document.getElementById('outputBadges').innerHTML =
+    `<span class="badge badge-grade">Grade ${exp.grade}</span>
+     <span class="badge badge-${exp.difficulty.toLowerCase()}">${exp.difficulty}</span>`;
+  document.getElementById('output-body').innerHTML =
+    `<div class="experiment-content">${marked.parse(exp.content)}</div>`;
+  document.getElementById('actionBar').style.display = 'flex';
+  document.getElementById('subPanel').style.display = 'none';
+  document.getElementById('subBtn').disabled = false;
+  document.getElementById('subBtn').textContent = '🤔 Suggest Substitutions';
+  buildWorksheet(exp);
+  document.getElementById('output-card').scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+function showError(message) {
+  const card = document.getElementById('output-card');
+  document.getElementById('outputBadges').innerHTML = '';
+  document.getElementById('output-body').innerHTML =
+    `<div class="error-box"><strong>Something went wrong</strong>${escapeHtml(message)}</div>`;
+  document.getElementById('actionBar').style.display = 'none';
+  document.getElementById('subPanel').style.display = 'none';
+  card.style.display = 'block';
+  card.scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+function escapeHtml(s) {
+  return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+// ── SUBSTITUTIONS ─────────────────────────────────────────────────────────────
+async function suggestSubstitutions() {
+  if (!currentExp) return;
+  const btn = document.getElementById('subBtn');
+  const panel = document.getElementById('subPanel');
+  const content = document.getElementById('subContent');
+
+  btn.disabled = true;
+  btn.innerHTML = '<span class="sub-spinner"></span> Finding substitutions…';
+  panel.style.display = 'block';
+  content.innerHTML = '<em>Loading…</em>';
+
+  try {
+    const prompt = `The following science experiment uses these supplies: ${currentExp.supplies}
+
+For each supply in the experiment, suggest 1–2 common household alternatives a student could use instead if they don't have it.
+Format your response as a markdown list: **Original item** → substitute1, substitute2
+Only include items that are genuinely used in the experiment. Keep substitutions practical and safe for students.`;
+
+    const result = await callOpenAI([{ role: 'user', content: prompt }]);
+    content.innerHTML = marked.parse(result);
+    btn.textContent = '✓ Substitutions loaded';
+  } catch(err) {
+    content.innerHTML = `<span style="color:var(--error-text)">${escapeHtml(err.message)}</span>`;
+    btn.disabled = false;
+    btn.textContent = '🤔 Suggest Substitutions';
+  }
+}
+
+// ── WORKSHEET ─────────────────────────────────────────────────────────────────
+function buildWorksheet(exp) {
+  const rows = exp.grade === 'K-2' ? 4 : 6;
+  const qs = exp.grade === 'K-2' ? 2 : exp.grade === '3-5' ? 3 : 4;
+
+  const obsRows = Array.from({length: rows}, (_, i) =>
+    `<tr><td>${i+1}</td><td></td><td></td></tr>`).join('');
+
+  const qLines = Array.from({length: qs}, (_, i) =>
+    `<p style="margin-bottom:8pt;"><strong>${i+1}.</strong></p>
+     <div class="ws-line"></div><div class="ws-line"></div>`).join('');
+
+  document.getElementById('worksheetArea').innerHTML = `
+    <div class="ws-title">Observation Worksheet — ${escapeHtml(exp.title)}</div>
+    <div class="ws-row">
+      <div class="ws-field"><label>Student Name</label><div class="ws-line"></div></div>
+      <div class="ws-field"><label>Date</label><div class="ws-line"></div></div>
+      <div class="ws-field" style="max-width:90px"><label>Grade</label><div class="ws-line"></div></div>
+    </div>
+    <div class="ws-section">
+      <div class="ws-section-title">My Hypothesis</div>
+      <div class="ws-line"></div><div class="ws-line"></div><div class="ws-line"></div>
+    </div>
+    <div class="ws-section">
+      <div class="ws-section-title">Observations</div>
+      <table class="ws-table">
+        <thead><tr><th>Step</th><th>What I Did</th><th>What I Observed</th></tr></thead>
+        <tbody>${obsRows}</tbody>
+      </table>
+    </div>
+    <div class="ws-section">
+      <div class="ws-section-title">My Results</div>
+      <div class="ws-line"></div><div class="ws-line"></div><div class="ws-line"></div>
+    </div>
+    <div class="ws-section">
+      <div class="ws-section-title">Conclusion</div>
+      <div class="ws-line"></div><div class="ws-line"></div><div class="ws-line"></div>
+    </div>
+    <div class="ws-section">
+      <div class="ws-section-title">Discussion Questions</div>
+      ${qLines}
+    </div>`;
+}
+
+// ── HISTORY ───────────────────────────────────────────────────────────────────
+function saveToHistory(exp) {
+  const entry = { id: Date.now(), ...exp };
+  history.unshift(entry);
+  if (history.length > 50) history = history.slice(0, 50);
+  try { localStorage.setItem('expHistory', JSON.stringify(history)); } catch(e) {}
+  renderHistory();
+  updateHistoryBadge();
+
+  // Flash "Saved" indicator
+  const ind = document.getElementById('savedIndicator');
+  ind.classList.add('show');
+  setTimeout(() => ind.classList.remove('show'), 2500);
+}
+
+function renderHistory() {
+  const list = document.getElementById('historyList');
+  if (!history.length) {
+    list.innerHTML = '<p class="history-empty">No experiments saved yet. Generate one to get started!</p>';
+    return;
+  }
+
+  list.innerHTML = `<div class="history-list">
+    ${history.map(e => `
+      <div class="history-entry" id="he-${e.id}">
+        <div class="history-header" onclick="toggleHistoryEntry(${e.id})">
+          <span class="history-title">${escapeHtml(e.title)}</span>
+          <span class="history-meta">
+            <span class="badge badge-grade" style="font-size:0.65rem;padding:3px 9px">Grade ${escapeHtml(e.grade)}</span>
+            <span class="badge badge-${e.difficulty.toLowerCase()}" style="font-size:0.65rem;padding:3px 9px">${escapeHtml(e.difficulty)}</span>
+            <span class="history-date">${escapeHtml(e.date)}</span>
+          </span>
+          <span class="chevron">&#9660;</span>
+        </div>
+        <div class="history-body">
+          <div class="experiment-content">${marked.parse(e.content)}</div>
+          <div class="history-actions">
+            <button class="action-btn" onclick="reloadExperiment(${e.id})">&#8617; Load &amp; Edit</button>
+            <button class="action-btn danger" onclick="deleteHistoryEntry(${e.id})">&#128465; Delete</button>
+          </div>
+        </div>
+      </div>
+    `).join('')}
+    <div class="history-clear-bar">
+      <button class="action-btn danger" onclick="clearHistory()">&#128465; Clear All</button>
+    </div>
+  </div>`;
+}
+
+function toggleHistoryEntry(id) {
+  const el = document.getElementById('he-' + id);
+  if (el) el.classList.toggle('expanded');
+}
+
+function deleteHistoryEntry(id) {
+  history = history.filter(e => e.id !== id);
+  try { localStorage.setItem('expHistory', JSON.stringify(history)); } catch(e) {}
+  renderHistory();
+  updateHistoryBadge();
+}
+
+function clearHistory() {
+  if (!history.length) return;
+  if (!confirm('Delete all saved experiments?')) return;
+  history = [];
+  try { localStorage.setItem('expHistory', '[]'); } catch(e) {}
+  renderHistory();
+  updateHistoryBadge();
+}
+
+function reloadExperiment(id) {
+  const entry = history.find(e => e.id === id);
+  if (!entry) return;
+  currentExp = entry;
+  showResult(entry);
+  switchTab('generate');
+}
+
+function updateHistoryBadge() {
+  const badge = document.getElementById('histBadge');
+  if (history.length > 0) {
+    badge.textContent = history.length;
+    badge.classList.remove('hidden');
+  } else {
+    badge.classList.add('hidden');
+  }
+}
+</script>
+</body>
+</html>
