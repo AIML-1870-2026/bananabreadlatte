@@ -226,9 +226,16 @@ textarea { padding: 10px 14px; resize: vertical; min-height: 80px; line-height: 
 .supply-label { font-size: 0.65rem; color: var(--text-muted); font-weight: 700; line-height: 1.2; }
 .supply-chip.selected .supply-label { color: var(--primary-dark); }
 .selected-count {
+  display: flex; align-items: center; gap: 10px;
   font-size: 0.75rem; color: var(--primary-dark); font-weight: 700;
-  margin-bottom: 8px; min-height: 18px;
+  margin-bottom: 8px; min-height: 22px;
 }
+.clear-chips-btn {
+  background: none; border: none; color: var(--text-muted);
+  font-family: var(--font); font-size: 0.72rem; font-weight: 700;
+  cursor: pointer; padding: 0; text-decoration: underline;
+}
+.clear-chips-btn:hover { color: var(--primary); }
 
 /* ── GENERATE BUTTON ── */
 .generate-btn {
@@ -354,6 +361,7 @@ textarea { padding: 10px 14px; resize: vertical; min-height: 80px; line-height: 
   body { background: white !important; color: black !important; font-size: 11pt; }
   .app-container { padding: 0 !important; max-width: 100% !important; }
   .tab-panel { display: flex !important; }
+  #tab-history { display: none !important; }
 }
 
 /* Worksheet print layout */
@@ -431,10 +439,12 @@ textarea { padding: 10px 14px; resize: vertical; min-height: 80px; line-height: 
         </div>
       </div>
 
-      <label class="supplies-section-label">
+      <p class="supplies-section-label">
         Common Household Supplies <span>(tap to select)</span>
-      </label>
-      <div class="selected-count" id="selectedCount"></div>
+      </p>
+      <div class="selected-count" id="selectedCount">
+        <button class="clear-chips-btn" id="clearChipsBtn" onclick="clearChips()" style="display:none">&#x2715; Clear</button>
+      </div>
       <div class="supplies-grid" id="suppliesGrid"></div>
 
       <div class="form-field">
@@ -477,7 +487,7 @@ textarea { padding: 10px 14px; resize: vertical; min-height: 80px; line-height: 
 </div><!-- /app-container -->
 
 <script>
-marked.setOptions({ breaks: true, gfm: true });
+marked.use({ breaks: true, gfm: true });
 
 // ── STATE ────────────────────────────────────────────────────────────────────
 let apiKey      = '';
@@ -584,9 +594,14 @@ function toggleSupply(name, chip) {
 
 function updateSelectedCount() {
   const el = document.getElementById('selectedCount');
-  el.textContent = selected.size > 0
-    ? `${selected.size} selected: ${[...selected].join(', ')}`
-    : '';
+  const btn = document.getElementById('clearChipsBtn');
+  if (selected.size > 0) {
+    el.firstChild.textContent = `${selected.size} selected: ${[...selected].join(', ')} `;
+    btn.style.display = 'inline';
+  } else {
+    el.firstChild.textContent = '';
+    btn.style.display = 'none';
+  }
 }
 
 function clearChips() {
