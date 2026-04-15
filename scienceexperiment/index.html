@@ -404,7 +404,13 @@ textarea { padding: 10px 14px; resize: vertical; min-height: 80px; line-height: 
       <div class="card-title">OpenAI API Key</div>
       <div class="key-row">
         <div class="key-input-wrap">
-          <input type="password" id="apiKeyInput" placeholder="sk-…" autocomplete="off" oninput="updateKeyStatus()" />
+          <input type="password" id="apiKeyInput" placeholder="sk-…"
+            autocomplete="new-password"
+            data-lpignore="true"
+            data-1p-ignore
+            data-bwignore
+            data-form-type="other"
+            oninput="updateKeyStatus()" />
           <button class="eye-btn" onclick="toggleKeyVisibility()" title="Show/hide">&#128065;</button>
         </div>
         <button class="upload-btn" onclick="document.getElementById('envFileInput').click()">&#128206; .env</button>
