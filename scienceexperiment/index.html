@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>Science Experiment Generator</title>
 <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/text-security/dist/text-security.css" />
 <style>
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
@@ -143,6 +144,10 @@ header h1 {
   background: var(--accent2);
   outline: none;
   transition: border-color 0.2s, box-shadow 0.2s;
+}
+.key-input-wrap input.masked {
+  font-family: "text-security-disc", monospace;
+  font-size: 1rem;
 }
 .key-input-wrap input:focus { border-color: var(--primary); box-shadow: 0 0 0 3px rgba(224,82,122,0.15); }
 .eye-btn {
@@ -404,8 +409,10 @@ textarea { padding: 10px 14px; resize: vertical; min-height: 80px; line-height: 
       <div class="card-title">OpenAI API Key</div>
       <div class="key-row">
         <div class="key-input-wrap">
-          <input type="password" id="apiKeyInput" placeholder="sk-…"
-            autocomplete="new-password"
+          <input type="text" id="apiKeyInput" placeholder="sk-…"
+            class="masked"
+            autocomplete="off"
+            spellcheck="false"
             data-lpignore="true"
             data-1p-ignore
             data-bwignore
@@ -620,8 +627,8 @@ function clearChips() {
 function toggleKeyVisibility() {
   const input = document.getElementById('apiKeyInput');
   const btn = input.parentElement.querySelector('.eye-btn');
-  input.type = input.type === 'password' ? 'text' : 'password';
-  btn.innerHTML = input.type === 'password' ? '&#128065;' : '&#128584;';
+  const masked = input.classList.toggle('masked');
+  btn.innerHTML = masked ? '&#128065;' : '&#128584;';
 }
 
 function parseEnvFile(event) {
