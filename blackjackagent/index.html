@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>💖 Blackjack AI</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+
+<!-- WELCOME SCREEN -->
+<div id="welcome-screen">
+  <div class="welcome-card">
+    <div class="welcome-icon">🃏</div>
+    <h1>Blackjack AI</h1>
+    <p>A cute AI-powered blackjack game.<br>Upload your Anthropic API key to start playing!</p>
+    <div class="upload-area" id="uploadArea">
+      <div class="upload-icon">📎</div>
+      <div class="upload-text">Drop your <code>.env</code> file here<br>or click to browse</div>
+      <input type="file" id="envFileInput" />
+    </div>
+    <div class="or-divider">— or paste your key directly —</div>
+    <input
+      type="text"
+      id="keyPasteInput"
+      placeholder="sk-ant-api03-..."
+      autocomplete="off"
+      spellcheck="false"
+      style="font-family:monospace;text-security:disc;-webkit-text-security:disc;"
+    />
+    <button class="btn-secondary" id="keyPasteBtn" onclick="submitPastedKey()">Use This Key ✨</button>
+    <div id="keyStatus" style="display:none">
+      <span class="key-badge">✨ Ready to play!</span>
+    </div>
+    <div class="key-error" id="keyError" style="display:none"></div>
+    <button class="btn-primary" id="startGameBtn" style="display:none">Start Playing 💖</button>
+  </div>
+</div>
+
+<!-- MAIN GAME -->
+<div id="game-container" style="display:none">
+
+  <!-- HEADER -->
+  <header>
+    <div class="header-left">
+      <h1 class="game-title">💖 Blackjack AI</h1>
+    </div>
+    <div class="header-center">
+      <div class="balance-display">
+        <span class="balance-label">Balance</span>
+        <span class="balance-amount" id="balanceDisplay">$200</span>
+      </div>
+      <div class="balance-display">
+        <span class="balance-label">Bet</span>
+        <span class="balance-amount">$10</span>
+      </div>
+    </div>
+    <div class="header-right">
+      <button class="icon-btn" id="analyticsBtn" title="Analytics">📊</button>
+      <button class="icon-btn" id="strategyBtn" title="Strategy Matrix">🎯</button>
+      <button class="icon-btn" id="settingsBtn" title="Settings">⚙️</button>
+    </div>
+  </header>
+
+  <!-- SETTINGS PANEL -->
+  <div class="panel-overlay" id="settingsPanel" style="display:none">
+    <div class="panel">
+      <div class="panel-header">
+        <h2>Settings ⚙️</h2>
+        <button class="close-btn" onclick="closePanel('settingsPanel')">✕</button>
+      </div>
+      <div class="setting-group">
+        <div class="setting-label">Risk Tolerance</div>
+        <div class="pill-group" id="riskPills">
+          <button class="pill" data-value="conservative" onclick="setRisk('conservative')">🐣 Conservative</button>
+          <button class="pill active" data-value="balanced" onclick="setRisk('balanced')">🌸 Balanced</button>
+          <button class="pill" data-value="aggressive" onclick="setRisk('aggressive')">🔥 Aggressive</button>
+        </div>
+        <div class="setting-desc" id="riskDesc">Standard basic strategy — balanced risk/reward.</div>
+      </div>
+      <div class="setting-group">
+        <div class="setting-label">AI Explanation Detail</div>
+        <div class="pill-group" id="detailPills">
+          <button class="pill" data-value="brief" onclick="setDetail('brief')">Brief</button>
+          <button class="pill active" data-value="standard" onclick="setDetail('standard')">Standard</button>
+          <button class="pill" data-value="detailed" onclick="setDetail('detailed')">Detailed</button>
+        </div>
+        <div class="setting-desc" id="detailDesc">2–3 sentences with statistical reasoning.</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ANALYTICS PANEL -->
+  <div class="panel-overlay" id="analyticsPanel" style="display:none">
+    <div class="panel">
+      <div class="panel-header">
+        <h2>Analytics 📊</h2>
+        <button class="close-btn" onclick="closePanel('analyticsPanel')">✕</button>
+      </div>
+      <div class="analytics-grid">
+        <div class="stat-card"><div class="stat-value" id="statHands">0</div><div class="stat-label">Hands</div></div>
+        <div class="stat-card win-card"><div class="stat-value" id="statWins">0</div><div class="stat-label">Wins</div></div>
+        <div class="stat-card loss-card"><div class="stat-value" id="statLosses">0</div><div class="stat-label">Losses</div></div>
+        <div class="stat-card push-card"><div class="stat-value" id="statPushes">0</div><div class="stat-label">Pushes</div></div>
+        <div class="stat-card"><div class="stat-value" id="statWinRate">0%</div><div class="stat-label">Win Rate</div></div>
+        <div class="stat-card"><div class="stat-value" id="statStreak">—</div><div class="stat-label">Streak</div></div>
+        <div class="stat-card"><div class="stat-value" id="statAiAcc">—</div><div class="stat-label">AI Accuracy</div></div>
+      </div>
+      <div class="sparkline-container">
+        <div class="sparkline-label">Bankroll History</div>
+        <canvas id="sparklineCanvas" height="80"></canvas>
+      </div>
+    </div>
+  </div>
+
+  <!-- STRATEGY PANEL -->
+  <div class="panel-overlay" id="strategyPanel" style="display:none">
+    <div class="panel panel-wide">
+      <div class="panel-header">
+        <h2>Basic Strategy Chart 🎯</h2>
+        <button class="close-btn" onclick="closePanel('strategyPanel')">✕</button>
+      </div>
+      <div class="strategy-legend">
+        <span class="legend-item hit">H Hit</span>
+        <span class="legend-item stand">S Stand</span>
+        <span class="legend-item double">D Double</span>
+        <span class="legend-item current">★ Current</span>
+      </div>
+      <div class="strategy-matrix-wrap">
+        <table class="strategy-table" id="strategyTable"></table>
+      </div>
+      <div class="strategy-match" id="strategyMatch" style="display:none"></div>
+    </div>
+  </div>
+
+  <!-- GAME TABLE -->
+  <main class="game-main">
+
+    <!-- DEALER -->
+    <section class="hand-section" id="dealerSection">
+      <div class="section-label">Dealer</div>
+      <div class="hand-display" id="dealerHand"></div>
+      <div class="hand-total" id="dealerTotal" style="display:none"></div>
+    </section>
+
+    <!-- PLAYER -->
+    <section class="hand-section" id="playerSection">
+      <div class="section-label">Your Hand</div>
+      <div class="hand-display" id="playerHand"></div>
+      <div class="hand-total player-total" id="playerTotal" style="display:none"></div>
+    </section>
+
+    <!-- AI ANALYSIS -->
+    <section class="ai-section" id="aiSection" style="display:none">
+      <div class="ai-header">
+        <span class="ai-icon">🤖</span>
+        <span class="ai-title">AI Analysis</span>
+        <span class="ai-badge" id="aiBadge"></span>
+      </div>
+      <div class="ai-loading" id="aiLoading" style="display:none">
+        <div class="spinner"></div>
+        <span>Consulting Claude...</span>
+      </div>
+      <div class="ai-result" id="aiResult" style="display:none">
+        <div class="ai-reasoning" id="aiReasoning"></div>
+        <div class="confidence-bar-wrap">
+          <span class="confidence-label">Confidence</span>
+          <div class="confidence-bar">
+            <div class="confidence-fill" id="confidenceFill"></div>
+          </div>
+          <span class="confidence-pct" id="confidencePct">0%</span>
+        </div>
+        <button class="deep-dive-toggle" id="deepDiveToggle" onclick="toggleDeepDive()">🔍 Deep Dive</button>
+        <div class="deep-dive" id="deepDive" style="display:none"></div>
+      </div>
+    </section>
+
+    <!-- ACTIONS -->
+    <section class="action-section" id="actionSection">
+
+      <div id="idleActions">
+        <button class="btn-deal" onclick="deal()">Deal 🃏</button>
+      </div>
+
+      <div id="playingActions" style="display:none">
+        <button class="btn-execute" id="executeBtn" style="display:none" onclick="executeAI()">
+          Execute: <span id="executeLabel">STAND</span> ✨
+        </button>
+        <button class="btn-ai" id="getAiBtn" onclick="getAIAdvice()">🤖 Get AI Advice</button>
+        <div class="manual-actions">
+          <button class="btn-hit" onclick="hitManual()">Hit</button>
+          <button class="btn-stand" onclick="standManual()">Stand</button>
+        </div>
+      </div>
+
+      <div id="resultActions" style="display:none">
+        <div class="result-card" id="resultCard">
+          <div class="result-msg" id="resultMsg"></div>
+          <div class="result-sub" id="resultSub"></div>
+        </div>
+        <button class="btn-deal" onclick="newHand()">Next Hand 🃏</button>
+      </div>
+
+    </section>
+
+  </main>
+
+  <!-- TOAST -->
+  <div class="toast" id="toast" style="display:none"></div>
+
+</div>
+
+<script src="script.js"></script>
+</body>
+</html>
